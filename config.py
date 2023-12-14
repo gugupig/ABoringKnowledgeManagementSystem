@@ -16,6 +16,7 @@ LOG_FILE_PATH_DOCUMENT_PROCESSING = '/root/gpt_projects/ABoringKnowledgeManageme
 
 
 EMBEDDING_DINENSION = 512
+TEXT_SPLIT_SIZE = 512
 LANGUAGE_CODE = ['en','fr','zh-cn','zh-tw']
 
 if __name__ == "__main__":

@@ -6,6 +6,10 @@ from document_process_pipeline import DocumentProcessPipeline  # Import your pip
 
 
 
+def home(request):
+    return render(request, 'base.html')  # or 'home.html' if extending base.html
+
+
 def document_upload(request):
     if request.method == 'POST':
         form = DocumentForm(request.POST, request.FILES)
@@ -18,7 +22,7 @@ def document_upload(request):
             pipeline = DocumentProcessPipeline()
             pipeline.document_pipeline(file, document_type)  # Adjust as needed
 
-            return render(request, 'WebUI/upload_success.html')
+            return render(request, 'upload_success.html')
     else:
         form = DocumentForm()
     return render(request, 'upload.html', {'form': form})
