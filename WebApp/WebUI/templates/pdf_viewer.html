@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+<head>
+    <title>Scrollable PDF Viewer</title>
+    <style>
+        #pdf-container {
+            width: 100%;
+            text-align: center;
+        }
+        .pdf-page-canvas {
+            margin-bottom: 1em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+<div id="pdf-container">
+<script type="module" src="{% static 'pdf_viewer.js' %}"></script>
+</div>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!-- file_list.html -->
+<ul id="pdf-list">
+    <!-- PDF files will be listed here -->
+</ul>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function(){
+        $.getJSON('/list_pdf_files/', function(data) {
+            $('#pdf-list').empty();
+            data.forEach(function(file) {
+                $('#pdf-list').append('<li><a href="#" onclick="selectPDF(\'' + file + '\')">' + file + '</a></li>');
+            });
+        });
+    });
+
+    function selectPDF(fileName) {
+        // Notify the pdf_viewer about the selected file
+        loadPDF(fileName);
+    }
+</script>
+
