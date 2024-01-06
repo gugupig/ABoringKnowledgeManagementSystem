@@ -61,30 +61,95 @@ class SearchEngine:
         res = self.es.delete(index=index_name, id=document_id)
         return res
     
-    def vector_search(self,index_name, query_vector):
-        query = {
-            "query": {
+    def vector_search(self, index_name, query_vector, language=None, mod_date_start=None, mod_date_end=None, additional_metadata=None):
+        must_queries = [
+            {
                 "script_score": {
-                    "query": {
-                        "match_all": {}  # You can replace this with more specific queries if needed
-                    },
+                    "query": {"match_all": {}},
                     "script": {
                         "source": "cosineSimilarity(params.query_vector, 'text_piece_vector') + 1.0",
-                        "params": {
-                            "query_vector": query_vector
-                        }
+                        "params": {"query_vector": query_vector}
                     }
                 }
             }
-        }
-        return self.es.search(index=index_name, body=query)
+        ]
 
-    def search_for_terms(self,index_name, term):
+        # Optional language filter
+        if language:
+            must_queries.append({"term": {"language": language}})
+
+        # Constructing the query
         query = {
             "query": {
-                "match": {
-                    "text_piece": term
+                "bool": {
+                    "must": must_queries,
+                    "filter": []
                 }
             }
         }
+
+        # Optional date range filter
+        if mod_date_start or mod_date_end:
+            date_range_filter = {"range": {"metadata.ModDate": {}}}
+            if mod_date_start:
+                date_range_filter["range"]["metadata.ModDate"]["gte"] = mod_date_start
+            if mod_date_end:
+                date_range_filter["range"]["metadata.ModDate"]["lte"] = mod_date_end
+            query["query"]["bool"]["filter"].append(date_range_filter)
+
+        # Optional additional metadata criteria
+        if additional_metadata:
+            for key, value in additional_metadata.items():
+                query['query']['bool']['must'].append({"match_all": {f"metadata.{key}": value}})
+
         return self.es.search(index=index_name, body=query)
+
+
+    def search_for_terms(self, index_name, word,exact_match = False, language=None, mod_date_start=None, mod_date_end=None, additional_metadata=None):
+        if exact_match:
+            must_queries = [
+                {
+                    "match_phrase": {
+                        "text_piece": word
+                    }
+                }
+            ]
+        else:
+            must_queries = [
+                {
+                    "match": {
+                        "text_piece": word
+                    }
+                }
+            ]
+
+        # Optional language filter
+        if language:
+            must_queries.append({"term": {"language": language}})
+
+        # Constructing the query
+        query = {
+            "query": {
+                "bool": {
+                    "must": must_queries,
+                    "filter": []
+                }
+            }
+        }
+
+        # Optional date range filter
+        if mod_date_start or mod_date_end:
+            date_range_filter = {"range": {"metadata.ModDate": {}}}
+            if mod_date_start:
+                date_range_filter["range"]["metadata.ModDate"]["gte"] = mod_date_start
+            if mod_date_end:
+                date_range_filter["range"]["metadata.ModDate"]["lte"] = mod_date_end
+            query["query"]["bool"]["filter"].append(date_range_filter)
+
+        # Optional additional metadata criteria
+        if additional_metadata:
+            for key, value in additional_metadata.items():
+                query['query']['bool']['must'].append({"match": {f"metadata.{key}": value}})
+
+        return self.es.search(index=index_name, body=query)
+

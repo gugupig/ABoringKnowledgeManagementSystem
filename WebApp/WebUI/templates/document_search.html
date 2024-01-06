@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1>Document Search</h1>
+
+<html>
+
+
+    
+
+<head>
+    <title>Document Search</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <style>
+        .custom-highlight {
+            background-color: yellow; 
+            font-weight: bold; 
+        }
+    </style>
+    
+        
+</head>
+<body>
+    <script>
+        function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+        function performSearch() {
+            const csrftoken = getCookie('csrftoken');
+            // Prevent the default form submission
+            event.preventDefault();
+
+            // Collect input values
+            var data = {
+                searchQuery: $('#searchQuery').val(),
+                documentType: $('#documentType').val(),
+                language: $('#language').val(),
+                author: $('#author').val(),
+                title: $('#title').val(),
+                subject: $('#subject').val(),
+                date: $('#date').val(),
+                exactMatch: $('#exactMatch').is(':checked'),
+                semanticSearch: $('#semanticSearch').is(':checked')
+            };
+
+            // Send an AJAX request
+            $.ajax({
+                url: '/search/',  // Update with the correct URL to your view function
+                type: 'POST',
+                headers: {'X-CSRFToken': csrftoken},
+                data: data,
+                success: function(response) {
+                    // Handle the response here
+                    var htmlContent = '';
+                    var searchQuery = $('#searchQuery').val();
+                    var regex = new RegExp(searchQuery, 'gi'); // 'gi' for global and case-insensitive
+                    response.results.forEach(function(doc) {
+                        var customhighlightText = doc.Text.replace(regex, '<span class="custom-highlight">' + searchQuery + '</span>');
+                        htmlContent += '<div class="result-item">';
+                        htmlContent += '<h3>Page Number: ' + doc.Page_number + '</h3>';
+                        htmlContent += '<p>' + customhighlightText + '</p>';
+                        // Display metadata
+                        if (doc.Metadata) {
+                            htmlContent += '<p>Title: ' + (doc.Metadata.Title || 'N/A') + '</p>';
+                            htmlContent += '<p>Author: ' + (doc.Metadata.Author || 'N/A') + '</p>';
+                            htmlContent += '<p>Date: ' + (doc.Metadata.ModDate || 'N/A') + '</p>';
+                            // Include other metadata fields as needed
+                        }
+                        htmlContent += '</div>';
+                    });
+                    $('#searchResults').html(htmlContent);
+                },
+                error: function(error) {
+                    // Handle errors here
+                    console.log(error);
+                }
+            });
+        }
+
+        // Attach the function to your form's submit event
+        $(document).ready(function() {
+            $('#queryForm').submit(performSearch);
+        });
+    </script>
+        <form id="queryForm" name = "queryForm">
+        <!-- Search Input -->
+        <input type="text" id="searchQuery" name="searchQuery" placeholder="Enter search keywords">
+
+        <!-- Document Type Dropdown -->
+        <select id="documentType">
+            <option value="research_paper" selected>Research Paper</option>
+            <option value="research_book">Research Book</option>
+            <option value="personal_document">Personal Document</option>
+            <option value="others">Others</option>
+        </select>
+        <!-- Exact Match Toggle -->
+        <label for="exactMatch">Exact Match</label>
+        <input type="checkbox" id="exactMatch" name="exactMatch" checked>
+        
+        <!-- Semantic Search Toggle -->
+        <label for="semanticSearch">Semantic Search</label>
+        <input type="checkbox" id="semanticSearch" name="semanticSearch">
+
+        
+        <!-- Language Dropdown -->
+        <select id="language">
+            <option value="cn">CN</option>
+            <option value="en" selected>EN</option>
+            <option value="fr">FR</option>
+        </select>
+
+        <!-- Additional Criteria -->
+        <input type="text" id="author" placeholder="Author">
+        <input type="text" id="title" placeholder="Title">
+        <input type="text" id="subject" placeholder="Subject">
+        <input type="text" id="date" placeholder="Date">
+
+
+        <!-- Search Button -->
+        
+        <button onclick="performSearch()" class="btn btn-primary">Search</button>
+        </form>
+    <!-- Search Results -->
+    <div id="searchResults" name = "searchResults"></div>
+</body>
+</html>
+{% endblock %}

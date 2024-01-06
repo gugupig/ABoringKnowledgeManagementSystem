@@ -2,7 +2,7 @@
 import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0/+esm';
 
 // Ensure the workerSrc property is specified.
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.269/build/pdf.worker.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0/build/pdf.worker.mjs';
 
 // Function to load and display a PDF
 window.loadPDF = function loadPDF(fileName) {

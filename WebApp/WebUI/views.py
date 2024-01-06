@@ -3,6 +3,8 @@
 from django.shortcuts import render
 from .forms import DocumentForm
 from document_process_pipeline import DocumentProcessPipeline  # Import pipeline
+from DocumentIndexing.Elastic.search_engine import SearchEngine
+from DocumentIndexing.Embedding.embedding_local import embeddings_multilingual
 
 
 
@@ -57,3 +59,47 @@ def list_pdf_files(request):
     pdf_files = [f for f in os.listdir(directory_path) if f.endswith('.pdf')]
 
     return JsonResponse(pdf_files, safe=False)
+
+
+
+def search_documents(request):
+    if request.method == 'POST':
+        print('Performing search...')
+        # Extract data from the POST request
+        search_query = request.POST.get('searchQuery',None)
+        document_type = request.POST.get('documentType')
+        language = request.POST.get('language','en')
+        author = request.POST.get('author') if request.POST.get('author') != '' else None
+        title = request.POST.get('title',None) if request.POST.get('title') != '' else None
+        subject = request.POST.get('subject',None) if request.POST.get('subject') != '' else None
+        date = request.POST.get('date',None) if request.POST.get('date') != '' else None
+        semantic_search = True if request.POST.get('semanticSearch')=='true' else False
+        exact_match = True if request.POST.get('exactMatch') == 'true' else False
+        additional_query = {}
+        for key,value in zip(['Author','Title','Subject',],[author,title,subject]):
+            if value != None:
+                additional_query[key] = value
+        if search_query != None: 
+            print('Search query:', search_query, 'Document type:', document_type, 'Language:', language, 'Author:', author, 'Title:', title, 'Subject:', subject, 'Date:', date, 'Semantic search:', semantic_search, 'Exact match:', exact_match)
+            # Search the index
+            search_engine = SearchEngine()
+            if semantic_search:
+                print('Performing semantic search...')
+                vect = embeddings_multilingual(search_query)
+                search_results = search_engine.vector_search(index_name= document_type,query_vector=vect, language = language, additional_metadata=additional_query)
+            else:
+                print('Performing term search...')
+                search_results = search_engine.search_for_terms(index_name= document_type,word=search_query,exact_match =exact_match , language = language, additional_metadata=additional_query)
+            if search_results['hits']['hits']:
+                search_results = [{'Page_number': hit['_source']['original_page_number'], 'Text': hit['_source']['text_piece'], 'Metadata': hit['_source']['metadata']} for hit in search_results['hits']['hits']]
+            else:
+                search_results = {'results': 'No results found'}
+            print(search_results) 
+    # Return a JsonResponse or render a template with the search 
+ 
+        return JsonResponse({'results': search_results})
+    else:
+        return render(request, 'document_search.html')
+    
+    #return JsonResponse({'results': 'Search results here'})
+
