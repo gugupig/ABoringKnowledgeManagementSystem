@@ -3,6 +3,7 @@ from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdftypes import resolve1
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTAnno, LTTextContainer
+from pdftitle import get_title_from_file
 import re
 
 def clean_extracted_text(text):
@@ -96,7 +97,15 @@ def extract_notes_from_pdf(file_path):
                 notes.append(element.get_text())
     return notes
 
+def get_title(file_path):
+    try:
+        title = get_title_from_file(file_path)
+    except:
+        title = None
+    return title
 
+
+import chardet
 
 def extract_pdf_metadata(file_path):
     """
@@ -111,9 +120,23 @@ def extract_pdf_metadata(file_path):
         parser = PDFParser(file)
         doc = PDFDocument(parser)
         if doc.info:  # Check if metadata is available
-            metadata = {key: (value.decode('utf-8') if isinstance(value, bytes) else value) 
-                        for key, value in doc.info[0].items()}
+            for key, value in doc.info[0].items():
+                if isinstance(value, bytes):
+                    # Detect the character encoding of the byte string
+                    encoding = chardet.detect(value)['encoding']
+                    # Decode using the detected encoding
+                    if encoding:
+                        try:
+                            metadata[key] = value.decode(encoding, errors='replace')
+                        except Exception:
+                            metadata[key] = value.decode('utf-8', errors='replace')
+                    else:
+                        metadata[key] = value.decode('utf-8', errors='replace')
+                else:
+                    metadata[key] = value
     return metadata
+
+
 
 
 
@@ -122,17 +145,15 @@ def extract_pdf_metadata(file_path):
 def structured_metadata_for_paper(file_path):
     metadata = extract_pdf_metadata(file_path)
     structured_metadata = {}
-    target_fields = ['Author', 'ModDate', 'Keywords', 'Title', 'Subject']
-    faild_fields = 0
+    target_fields = ['Author', 'ModDate', 'Keywords', 'Subject']
     if metadata:
         for field in target_fields:
             if field in metadata:
                 structured_metadata[field] = metadata[field] if field != 'ModDate' else convert_date(metadata[field])
             else:
-                structured_metadata[field] = None
-                faild_fields += 1
-    if faild_fields == len(target_fields)-1:
-        structured_metadata = metadata
+                structured_metadata[field] = ''
+    if 'Title' in metadata:
+        structured_metadata['Title'] = metadata['Title'] if metadata['Title'] != '' else get_title(file_path)
     return structured_metadata  
 
 from datetime import datetime

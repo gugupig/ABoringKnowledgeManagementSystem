@@ -9,10 +9,10 @@ from DocumentIndexing.Embedding.embedding_local import embeddings_multilingual
 
 
 def home(request):
-    return render(request, 'base.html')  # or 'home.html' if extending base.html
+    return render(request, 'homepage.html')  # or 'home.html' if extending base.html
 
 
-def document_upload(request):
+def document_upload_old(request):
     if request.method == 'POST':
         form = DocumentForm(request.POST, request.FILES)
         if form.is_valid():
@@ -28,6 +28,28 @@ def document_upload(request):
     else:
         form = DocumentForm()
     return render(request, 'upload.html', {'form': form})
+
+def document_upload(request):
+    if request.method == 'POST':
+        form = DocumentForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Get the selected document type
+            document_type = form.cleaned_data['document_type']
+            file = request.FILES['file']
+
+            # Process the file using document process pipeline
+            pipeline = DocumentProcessPipeline()
+            pipeline.document_pipeline(file, document_type)  # Adjust as needed
+
+            # Return a JSON response instead of rendering a page
+            return JsonResponse({'status': 'success', 'message': 'File uploaded successfully'})
+        else:
+            # Return an error message if form is not valid
+            return JsonResponse({'status': 'error', 'message': 'Invalid form submission'}, status=400)
+
+    else:
+        form = DocumentForm()
+        return render(request, 'document_upload.html', {'form': form})
 
 def document_viewer(request):
     return render(request, 'document_viewer.html')
@@ -91,13 +113,14 @@ def search_documents(request):
                 print('Performing term search...')
                 search_results = search_engine.search_for_terms(index_name= document_type,word=search_query,exact_match =exact_match , language = language, additional_metadata=additional_query)
             if search_results['hits']['hits']:
+                result_count = len(search_results['hits']['hits'])
                 search_results = [{'Page_number': hit['_source']['original_page_number'], 'Text': hit['_source']['text_piece'], 'Metadata': hit['_source']['metadata']} for hit in search_results['hits']['hits']]
             else:
-                search_results = {'results': 'No results found'}
+                search_results = [{'Page_number': 'No results found', 'Text': 'No results found', 'Metadata': 'No results found'}]
             print(search_results) 
     # Return a JsonResponse or render a template with the search 
  
-        return JsonResponse({'results': search_results})
+        return JsonResponse({'results': search_results, 'resultCount': result_count})
     else:
         return render(request, 'document_search.html')
     

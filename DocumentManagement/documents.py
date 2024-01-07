@@ -45,8 +45,8 @@ class Document:
 class PDFDocument(Document):
     file_type = 'pdf'
 
-    def __init__(self, document_id, file_location, document_type):
-        super().__init__(document_id, file_location, document_type)
+    def __init__(self, document_id, file_path, document_type):
+        super().__init__(document_id, file_path, document_type)
         self.metadata = {}
         self.text = {}
         #self.toc = {}
@@ -55,7 +55,7 @@ class PDFDocument(Document):
 
     def process_document(self):
         self.text = extract_text_from_pdf(self.file_path)
-        self.metadata = extract_pdf_metadata(self.file_path) if self.document_type == 'Research Paper' else structured_metadata_for_paper(self.file_path)
+        self.metadata = structured_metadata_for_paper(self.file_path)
         #self.toc = extract_toc_from_pdf(self.file_path)
         self.notes = extract_notes_from_pdf(self.file_path)
         self.set_language()
@@ -67,8 +67,8 @@ class PDFDocument(Document):
 class DOCXDocument(Document):
     file_type = 'docx'
 
-    def __init__(self, document_id, file_location, document_type):
-        super().__init__(document_id, file_location, document_type)
+    def __init__(self, document_id, file_path, document_type):
+        super().__init__(document_id, file_path, document_type)
         self.metadata = {}
         self.text = {}
         self.language = ''

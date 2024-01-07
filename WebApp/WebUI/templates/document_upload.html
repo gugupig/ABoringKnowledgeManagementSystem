@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block content %}
+<html>  
+    <head>  
+        <title>Document Upload</title>
+        <style>
+            .loader {
+                border: 16px solid #f3f3f3; /* Light grey */
+                border-top: 16px solid #3498db; /* Blue */
+                border-radius: 50%;
+                width: 120px;
+                height: 120px;
+                animation: spin 2s linear infinite;
+            }
+            
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            </style>
+    </head>
+    <body>
+        <form id="uploadForm" method="post" action="/document_upload/" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form }}
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>        
+        
+        <div id="spinner" style="display: none;">
+            <div class="loader"></div>
+        </div>        
+        <div id="uploadMessage" style="display: none;">Uploading, please wait... !!DO NOT REFRESH THE PAGE!!</div>
+        <div id="uploadStatus"></div> <!-- For displaying status messages -->
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                var uploadForm = document.getElementById('uploadForm');
+                uploadForm.addEventListener('submit', function(e) {
+                    e.preventDefault(); // Stop the form from submitting normally
+
+                    // Show the upload message and progress bar
+                    document.getElementById('uploadMessage').style.display = 'block';
+                    document.getElementById('spinner').style.display = 'block';
+
+                    var formData = new FormData(uploadForm);
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', uploadForm.getAttribute('action'), true);
+
+                    // CSRF token handling (assuming Django template)
+                    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+
+                    xhr.onload = function() {
+                        // Hide the upload message and progress bar
+                        document.getElementById('uploadMessage').style.display = 'none';
+                        document.getElementById('spinner').style.display = 'none';
+
+                        if (xhr.status === 200) {
+                            try {
+                                var response = JSON.parse(xhr.responseText);
+                                document.getElementById('uploadStatus').innerHTML = response.message;
+                            } catch (e) {
+                                document.getElementById('uploadStatus').innerHTML = 'Received non-JSON response';
+                            }
+                        } else {
+                            try {
+                                var errorResponse = JSON.parse(xhr.responseText);
+                                document.getElementById('uploadStatus').innerHTML = errorResponse.message;
+                            } catch (e) {
+                                document.getElementById('uploadStatus').innerHTML = 'Error during file upload';
+                            }
+                        }
+                    };
+                    xhr.send(formData);
+                });
+            });
+        </script>
+    </body>
+</html>
+{% endblock %}

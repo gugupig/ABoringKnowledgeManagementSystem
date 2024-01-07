@@ -18,9 +18,86 @@
             background-color: yellow; 
             font-weight: bold; 
         }
-    </style>
-    
+    </style> 
+    <style>
+        iframe {
+        width: 28vw;
+        height: 53vh;
+            }
+        #chatbotButton {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        /* additional styling */
+        }
+        #chatbotWindow {
+        position: fixed;
+        bottom: 700px;
+        right: 200px;
         
+        /* additional styling */
+        }
+        .window {
+        position: fixed;
+        width: 30vw;
+        height: 55vh;
+        bottom: 10px !important;
+        right: 10px !important;
+        border-radius: 10px;
+        border: none;
+        box-shadow: 1px 1px 4px rgba(0,0,0,0,0.9), -1px 1px 4px rgba(0,0,0,0,0.9);
+        background: #00000000;
+    }
+
+    .window-content {
+        background: #00000000;
+        color: #fff;
+        height: 100%;
+        font-family: monospace;
+        padding: 5px;
+        overflow-y: auto;
+    }
+
+    .window-top, .window-top-no-bind {
+        cursor: move;
+        text-align: right;
+        height: 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.5);
+        border-top-right-radius: 5px;
+        border-top-left-radius: 5px;
+        padding: 5px;
+        background-color: #ddd;
+    }
+
+    .window-top-no-bind {
+        cursor: inherit;
+    }
+
+    .round {
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        border: none;
+        margin-right: 6px;
+        box-shadow: 1px 1px 2px #000;
+    }
+
+    .green {
+        background-color: limegreen;
+    }
+
+    .yellow {
+        background-color: yellow;
+    }
+
+    .red {
+        cursor: pointer;
+        background-color: red;
+    }
+    #chatbotWindow {
+        z-index: 999;
+        }
+    </style>
 </head>
 <body>
     <script>
@@ -62,22 +139,24 @@
                 type: 'POST',
                 headers: {'X-CSRFToken': csrftoken},
                 data: data,
-                success: function(response) {
+                success: function(response) {   
                     // Handle the response here
                     var htmlContent = '';
                     var searchQuery = $('#searchQuery').val();
                     var regex = new RegExp(searchQuery, 'gi'); // 'gi' for global and case-insensitive
+                    htmlContent += '<h2>Found ' + response.resultCount + ' text piece</h2>';
+                    htmlContent += '<hr width="50%" color="green" />';
                     response.results.forEach(function(doc) {
                         var customhighlightText = doc.Text.replace(regex, '<span class="custom-highlight">' + searchQuery + '</span>');
                         htmlContent += '<div class="result-item">';
-                        htmlContent += '<h3>Page Number: ' + doc.Page_number + '</h3>';
+                        htmlContent += '<strong>Page Number: ' + doc.Page_number + '</strong>';
                         htmlContent += '<p>' + customhighlightText + '</p>';
                         // Display metadata
                         if (doc.Metadata) {
                             htmlContent += '<p>Title: ' + (doc.Metadata.Title || 'N/A') + '</p>';
                             htmlContent += '<p>Author: ' + (doc.Metadata.Author || 'N/A') + '</p>';
                             htmlContent += '<p>Date: ' + (doc.Metadata.ModDate || 'N/A') + '</p>';
-                            // Include other metadata fields as needed
+                            htmlContent += '<hr />';
                         }
                         htmlContent += '</div>';
                     });
@@ -89,12 +168,21 @@
                 }
             });
         }
-
+        
         // Attach the function to your form's submit event
         $(document).ready(function() {
             $('#queryForm').submit(performSearch);
         });
     </script>
+    <script>
+                document.addEventListener('DOMContentLoaded', (event) => {
+                document.getElementById("chatbotButton").onclick = function() {
+                    var chatWindow = document.getElementById("chatbotWindow");
+                    chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
+                };
+                });
+    </script>
+
         <form id="queryForm" name = "queryForm">
         <!-- Search Input -->
         <input type="text" id="searchQuery" name="searchQuery" placeholder="Enter search keywords">
@@ -135,6 +223,71 @@
         </form>
     <!-- Search Results -->
     <div id="searchResults" name = "searchResults"></div>
+
+
+    <button id="chatbotButton">Chat</button>
+
+    <div id="chatbotWindow" class="window" style="display: none;">
+        <div class="window-top">
+            <button class="round green"></button><button class="round yellow"></button><button class="round red"></button>
+        </div>
+        <div class="window-content">
+            <iframe src="http://localhost:8501" class="chatIframe"></iframe>
+        </div>
+    </div>
+    
+    <script>
+        function makeDraggable (element) {
+    // Make an element draggable (or if it has a .window-top class, drag based on the .window-top element)
+    let currentPosX = 0, currentPosY = 0, previousPosX = 0, previousPosY = 0;
+
+        // If there is a window-top classed element, attach to that element instead of full window
+    if (element.querySelector('.window-top')) {
+        // If present, the window-top element is where you move the parent element from
+        element.querySelector('.window-top').onmousedown = dragMouseDown;
+    } 
+    else {
+        // Otherwise, move the element itself
+        element.onmousedown = dragMouseDown;
+    }
+
+    function dragMouseDown (e) {
+        // Prevent any default action on this element (you can remove if you need this element to perform its default action)
+        e.preventDefault();
+        // Get the mouse cursor position and set the initial previous positions to begin
+        previousPosX = e.clientX;
+        previousPosY = e.clientY;
+        // When the mouse is let go, call the closing event
+        document.onmouseup = closeDragElement;
+        // call a function whenever the cursor moves
+        document.onmousemove = elementDrag;
+    }
+
+    function elementDrag (e) {
+        // Prevent any default action on this element (you can remove if you need this element to perform its default action)
+        e.preventDefault();
+        // Calculate the new cursor position by using the previous x and y positions of the mouse
+        currentPosX = previousPosX - e.clientX;
+        currentPosY = previousPosY - e.clientY;
+        // Replace the previous positions with the new x and y positions of the mouse
+        previousPosX = e.clientX;
+        previousPosY = e.clientY;
+        // Set the element's new position
+        element.style.top = (element.offsetTop - currentPosY) + 'px';
+        element.style.left = (element.offsetLeft - currentPosX) + 'px';
+    }
+
+    function closeDragElement () {
+        // Stop moving when mouse button is released and release events
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
+}
+
+makeDraggable(document.querySelector('#chatbotWindow'));
+
+</script>
+
 </body>
 </html>
 {% endblock %}
