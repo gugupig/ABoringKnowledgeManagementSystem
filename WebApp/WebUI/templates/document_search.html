@@ -98,6 +98,29 @@
         z-index: 999;
         }
     </style>
+    <style> 
+        .collapsible {
+        background-color: #f1f1f1;
+        color: black;
+        cursor: pointer;
+        padding: 18px;
+        border: none;
+        text-align: left;
+        outline: none;
+        font-size: 15px;
+    }
+
+    .active, .collapsible:hover {
+        background-color: #ccc;
+    }
+
+    .content {
+        padding: 0 18px;
+        display: none;
+        overflow: hidden;
+        background-color: #f9f9f9;
+    }
+    </style>
 </head>
 <body>
     <script>
@@ -132,35 +155,52 @@
                 exactMatch: $('#exactMatch').is(':checked'),
                 semanticSearch: $('#semanticSearch').is(':checked')
             };
-
+            regex = new RegExp($('#searchQuery').val(), 'gi'); // 'gi' for global and case-insensitive
             // Send an AJAX request
             $.ajax({
                 url: '/search/',  // Update with the correct URL to your view function
                 type: 'POST',
                 headers: {'X-CSRFToken': csrftoken},
                 data: data,
-                success: function(response) {   
-                    // Handle the response here
-                    var htmlContent = '';
-                    var searchQuery = $('#searchQuery').val();
-                    var regex = new RegExp(searchQuery, 'gi'); // 'gi' for global and case-insensitive
-                    htmlContent += '<h2>Found ' + response.resultCount + ' text piece</h2>';
-                    htmlContent += '<hr width="50%" color="green" />';
-                    response.results.forEach(function(doc) {
-                        var customhighlightText = doc.Text.replace(regex, '<span class="custom-highlight">' + searchQuery + '</span>');
-                        htmlContent += '<div class="result-item">';
-                        htmlContent += '<strong>Page Number: ' + doc.Page_number + '</strong>';
-                        htmlContent += '<p>' + customhighlightText + '</p>';
+                success: function(response) {
+                    var htmlContent = '<h2>Found ' + response.resultCount + ' text piece(s)</h2>';
+                    htmlContent += '<hr width="50%" size="1" color="green" />';
+                    response.results.forEach(function(group) {
+                        var firstResult = group.results[0];
+                        htmlContent += '<div class="document-group">';
+                        htmlContent += '<button class="collapsible">Document ID: ' + group.document_id + '</button>';
+                        htmlContent += '<div class="content">';
                         // Display metadata
-                        if (doc.Metadata) {
-                            htmlContent += '<p>Title: ' + (doc.Metadata.Title || 'N/A') + '</p>';
-                            htmlContent += '<p>Author: ' + (doc.Metadata.Author || 'N/A') + '</p>';
-                            htmlContent += '<p>Date: ' + (doc.Metadata.ModDate || 'N/A') + '</p>';
+                        if (firstResult.Metadata) {
+                                htmlContent += '<p><strong>Title: ' + (firstResult.Metadata.Title || 'N/A') + '</strong></p>';
+                                htmlContent += '<p><strong>Author: ' + (firstResult.Metadata.Author || 'N/A') + '</strong></p>';
+                                htmlContent += '<p><strong>Date: ' + (firstResult.Metadata.ModDate || 'N/A') + '</strong></p>';
+                            }
+                        htmlContent += '<hr />';
+                        group.results.forEach(function(doc) {
+                            var customhighlightText = doc.Text.replace(regex, '<span class="custom-highlight">' + $('#searchQuery').val() + '</span>');
+                            htmlContent += '<div class="result-item">';
+                            htmlContent += '<strong>Page Number: ' + doc.Page_number + '</strong>';
+                            htmlContent += '<p>' + customhighlightText + '</p>';
+                        
                             htmlContent += '<hr />';
-                        }
-                        htmlContent += '</div>';
+                            htmlContent += '</div>';
+                        });
+
+                        htmlContent += '</div>';  // Close content div
+                        htmlContent += '</div>';  // Close document group div
                     });
+
                     $('#searchResults').html(htmlContent);
+                    $('.collapsible').click(function() {
+                        this.classList.toggle('active');
+                        var content = this.nextElementSibling;
+                        if (content.style.display === "block") {
+                            content.style.display = "none";
+                        } else {
+                            content.style.display = "block";
+                        }
+                    });
                 },
                 error: function(error) {
                     // Handle errors here
@@ -235,7 +275,7 @@
             <iframe src="http://localhost:8501" class="chatIframe"></iframe>
         </div>
     </div>
-    
+        
     <script>
         function makeDraggable (element) {
     // Make an element draggable (or if it has a .window-top class, drag based on the .window-top element)

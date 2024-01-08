@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-2v6y+e-k#g5mfpqu-%o97@ymf510-yis(2+=x@*3j(kr*@_4fw
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['194.163.147.140', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['194.163.147.140', 'localhost', '127.0.0.1',"0.0.0.0"]
 
 
 
@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'WebUI',
+    'tailwind',
+    'theme',
 ]
 
 MIDDLEWARE = [
@@ -130,3 +132,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 X_FRAME_OPTIONS = 'ALLOWALL'
 
 XS_SHARING_ALLOWED_METHODS = ['POST','GET','OPTIONS', 'PUT', 'DELETE']
+
+TAILWIND_APP_NAME = 'theme'
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]

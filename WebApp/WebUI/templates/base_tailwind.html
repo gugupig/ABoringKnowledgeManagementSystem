@@ -1,0 +1,18 @@
+{% load tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Django Tailwind</title>
+    {% tailwind_css %}
+  </head>
+  <body>
+    <h1>ABoringKnowledgeManagementSystem</h1>
+    {% block navbar %}
+    {% include 'tabs.html' %}
+    {% endblock %}
+    <div class="container">
+        {% block content %}
+        <!-- Content will go here -->
+        {% endblock %}
+  </body>
+</html>

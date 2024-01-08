@@ -83,15 +83,14 @@ def list_pdf_files(request):
     return JsonResponse(pdf_files, safe=False)
 
 
-
 def search_documents(request):
     if request.method == 'POST':
         print('Performing search...')
         # Extract data from the POST request
-        search_query = request.POST.get('searchQuery',None)
+        search_query = request.POST.get('searchQuery',None) if request.POST.get('searchQuery') != '' else None
         document_type = request.POST.get('documentType')
         language = request.POST.get('language','en')
-        author = request.POST.get('author') if request.POST.get('author') != '' else None
+        author = request.POST.get('author',None) if request.POST.get('author') != '' else None
         title = request.POST.get('title',None) if request.POST.get('title') != '' else None
         subject = request.POST.get('subject',None) if request.POST.get('subject') != '' else None
         date = request.POST.get('date',None) if request.POST.get('date') != '' else None
@@ -113,16 +112,36 @@ def search_documents(request):
                 print('Performing term search...')
                 search_results = search_engine.search_for_terms(index_name= document_type,word=search_query,exact_match =exact_match , language = language, additional_metadata=additional_query)
             if search_results['hits']['hits']:
-                result_count = len(search_results['hits']['hits'])
-                search_results = [{'Page_number': hit['_source']['original_page_number'], 'Text': hit['_source']['text_piece'], 'Metadata': hit['_source']['metadata']} for hit in search_results['hits']['hits']]
+                grouped_results = {}
+                for hit in search_results['hits']['hits']:
+                    doc_id = hit['_source']['document_id_universal']
+                    if doc_id not in grouped_results:
+                        grouped_results[doc_id] = []
+                    grouped_results[doc_id].append({
+                        'Page_number': hit['_source']['original_page_number'],
+                        'Text': hit['_source']['text_piece'],
+                        'Metadata': hit['_source']['metadata']
+                    })
+
+                search_results = [{'document_id': doc_id, 'results': docs} for doc_id, docs in grouped_results.items()]
+                result_count = sum(len(docs) for docs in grouped_results.values())
             else:
                 search_results = [{'Page_number': 'No results found', 'Text': 'No results found', 'Metadata': 'No results found'}]
             print(search_results) 
     # Return a JsonResponse or render a template with the search 
- 
+        else:
+            search_results = [{'Page_number': 'No results found', 'Text': 'No results found', 'Metadata': 'No results found'}]
+            return JsonResponse({'results': search_results, 'resultCount': 0})
         return JsonResponse({'results': search_results, 'resultCount': result_count})
     else:
         return render(request, 'document_search.html')
-    
-    #return JsonResponse({'results': 'Search results here'})
+
+import base64  
+def byte_pdfview(request):
+    with open('/root/gpt_projects/ABoringKnowledgeManagementSystem/DocumentBank/research_paper/e7fd33bc-6b64-4550-9b69-b8139487d37a.pdf', 'rb') as pdf_file:
+        bytes_data = pdf_file.read()
+    base64_pdf = base64.b64encode(bytes_data).decode('utf-8')
+    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800px" style="border: none;"></iframe>'
+
+    return render(request, 'byte_pdfview.html', {'pdf_display': pdf_display})
 
