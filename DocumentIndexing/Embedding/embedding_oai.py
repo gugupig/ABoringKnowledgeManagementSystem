@@ -1,4 +1,18 @@
 import openai
+import toml
+
+def load_config(file_path):
+    """
+    Load configuration from a TOML file.
+
+    Parameters:
+    file_path (str): Path to the TOML file.
+
+    Returns:
+    dict: Configuration data.
+    """
+    with open(file_path, "r") as file:
+        return toml.load(file)
 
 def embed_texts(text_list):
     """
@@ -11,16 +25,15 @@ def embed_texts(text_list):
     list of list: A list containing the embedding vectors for each input text.
     """
 
-    openai.api_key = "your-api-key"  # Replace with your OpenAI API key
+    # Load configuration
+    config = load_config("secrets.toml")
+    openai.api_key = config["openai"]["api_key"]
 
-    # Splitting the text list into smaller chunks if it's very large
-    # This is to ensure that we don't hit API limits for a single request
-    chunk_size = 20  # API limit may vary, adjust accordingly
-    chunks = [text_list[i:i + chunk_size] for i in range(0, len(text_list), chunk_size)]
+    # Embedding the texts
+    response = openai.Embedding.create(input=text_list, engine="text-similarity-babbage-001")
+    return [embedding['embedding'] for embedding in response['data']]
 
-    embeddings = []
-    for chunk in chunks:
-        response = openai.Embedding.create(input=chunk, engine="text-similarity-babbage-001")
-        embeddings.extend([embedding['embedding'] for embedding in response['data']])
-
-    return embeddings
+# Example Usage
+# texts = ["Hello, world!", "Another example text"]
+# embeddings = embed_texts(texts)
+# print(embeddings)
