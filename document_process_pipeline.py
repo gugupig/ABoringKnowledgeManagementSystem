@@ -1,7 +1,7 @@
 # Description: This file is the main file for the document processing pipeline
 import os
 from DocumentIndexing.MongoDB import documentstore
-from DocumentIndexing.Elastic import search_engine, IndexSettingsGenerator
+from DocumentIndexing.Elastic import search_engine
 from DocumentIndexing.Embedding import text_splitter
 from DocumentIndexing.Embedding.embedding_local import embeddings_multilingual
 from DocumentManagement.documents import Document
@@ -15,7 +15,6 @@ import time
 class DocumentProcessPipeline:
     def __init__(self):
         self.search_engine = search_engine.SearchEngine()
-        self.index_settings_generator = IndexSettingsGenerator
         self.document_store = documentstore
         self.common_utils = common_utils
         self.document_bank_location = {
@@ -85,22 +84,6 @@ class DocumentProcessPipeline:
                 retries += 1
                 time.sleep(retry_delay)
         return upload_status
-        
-    def upload_document_to_elastic(self, document, document_type, file_name, file_type, max_retries=3, retry_delay=1):
-        upload_status = False
-        retries = 0
-        elastic_engine = self.SearchEngine(es_hosts = ES_HOST)
-        while retries < max_retries:
-            try:
-                elastic_engine.upload_document_to_elastic(document, document_type, file_name, file_type)
-                upload_status = True
-                break
-            except Exception as e:
-                print(e)
-                retries += 1
-                time.sleep(retry_delay)
-        return upload_status
-
     def split_document(self, document, max_retries=2, retry_delay=1):
         split_status = False
         retries = 0
@@ -121,6 +104,7 @@ class DocumentProcessPipeline:
             'document_id_universal' : document.document_id,
             'upload_date': int(datetime.now().timestamp() * 1000),
             'language': document.language,
+            'document_tags': document.tags,
         }
         if document.file_type == 'pdf' or document.file_type == 'docx':
             doc['metadata'] = document.metadata
@@ -146,6 +130,7 @@ class DocumentProcessPipeline:
         sub_pipeline_status = True
         return sub_pipeline_status
 
+    #THIS IS NOT WORKING, NEED TO BE FIXED
     def sub_pipeline_bulk(self, document):
         sub_pipeline_status = False
         splited_text_bulk = {}
@@ -157,7 +142,7 @@ class DocumentProcessPipeline:
         return sub_pipeline_status
 
 
-    def document_pipeline(self, file, document_type):
+    def document_pipeline(self, file, document_type,metadata = None):
         # Generate unique document ID at the beginning
         document_id = self.common_utils.generate_document_id()
 
@@ -197,6 +182,7 @@ class DocumentProcessPipeline:
             #roll back for mongodb
             self.document_store.delete_document_from_mongodb(new_document.document_id)
             return False
+        return document_id
 
         
         

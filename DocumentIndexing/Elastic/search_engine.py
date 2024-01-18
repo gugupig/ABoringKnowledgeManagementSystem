@@ -50,12 +50,6 @@ class SearchEngine:
         ]
         helpers.bulk(self.es, actions)
 
-    def search_documents(self, query, indices, size=10):
-        """
-        Search for documents matching the query across specified indices.
-        """
-        return self.es.search(index=','.join(indices), body={"query": query, "size": size})
-
     def delete_document(self,index_name, document_id):
     # Delete the document by its ID
         res = self.es.delete(index=index_name, id=document_id)

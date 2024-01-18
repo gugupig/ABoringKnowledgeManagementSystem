@@ -10,5 +10,6 @@ urlpatterns = [
     path('serve_pdf/', views.serve_pdf, name='serve_pdf'),
     path('list_pdf_files/', views.list_pdf_files, name='list_pdf_files'),
     path('search/', views.search_documents, name='search'),
-    path('chat/', views.byte_pdfview, name='chat')
+    path('chat/', views.chat, name='chat'),
+    path('wip/', views.wip, name='wip'),
 ]

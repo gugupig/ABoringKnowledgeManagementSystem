@@ -1,9 +1,5 @@
 <!DOCTYPE html>
-{% extends 'base.html' %}
-
-{% block content %}
-
-<h1>Document Search</h1>
+{%load static%}
 
 <html>
 
@@ -12,115 +8,12 @@
 
 <head>
     <title>Document Search</title>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <style>
         .custom-highlight {
             background-color: yellow; 
             font-weight: bold; 
         }
     </style> 
-    <style>
-        iframe {
-        width: 28vw;
-        height: 53vh;
-            }
-        #chatbotButton {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        /* additional styling */
-        }
-        #chatbotWindow {
-        position: fixed;
-        bottom: 700px;
-        right: 200px;
-        
-        /* additional styling */
-        }
-        .window {
-        position: fixed;
-        width: 30vw;
-        height: 55vh;
-        bottom: 10px !important;
-        right: 10px !important;
-        border-radius: 10px;
-        border: none;
-        box-shadow: 1px 1px 4px rgba(0,0,0,0,0.9), -1px 1px 4px rgba(0,0,0,0,0.9);
-        background: #00000000;
-    }
-
-    .window-content {
-        background: #00000000;
-        color: #fff;
-        height: 100%;
-        font-family: monospace;
-        padding: 5px;
-        overflow-y: auto;
-    }
-
-    .window-top, .window-top-no-bind {
-        cursor: move;
-        text-align: right;
-        height: 20px;
-        border-bottom: 1px solid rgba(0,0,0,0.5);
-        border-top-right-radius: 5px;
-        border-top-left-radius: 5px;
-        padding: 5px;
-        background-color: #ddd;
-    }
-
-    .window-top-no-bind {
-        cursor: inherit;
-    }
-
-    .round {
-        height: 16px;
-        width: 16px;
-        border-radius: 50%;
-        border: none;
-        margin-right: 6px;
-        box-shadow: 1px 1px 2px #000;
-    }
-
-    .green {
-        background-color: limegreen;
-    }
-
-    .yellow {
-        background-color: yellow;
-    }
-
-    .red {
-        cursor: pointer;
-        background-color: red;
-    }
-    #chatbotWindow {
-        z-index: 999;
-        }
-    </style>
-    <style> 
-        .collapsible {
-        background-color: #f1f1f1;
-        color: black;
-        cursor: pointer;
-        padding: 18px;
-        border: none;
-        text-align: left;
-        outline: none;
-        font-size: 15px;
-    }
-
-    .active, .collapsible:hover {
-        background-color: #ccc;
-    }
-
-    .content {
-        padding: 0 18px;
-        display: none;
-        overflow: hidden;
-        background-color: #f9f9f9;
-    }
-    </style>
 </head>
 <body>
     <script>
@@ -143,6 +36,8 @@
             // Prevent the default form submission
             event.preventDefault();
 
+            // Show spinner
+            $('#loadingSpinner').show();
             // Collect input values
             var data = {
                 searchQuery: $('#searchQuery').val(),
@@ -163,7 +58,12 @@
                 headers: {'X-CSRFToken': csrftoken},
                 data: data,
                 success: function(response) {
-                    var htmlContent = '<h2>Found ' + response.resultCount + ' text piece(s)</h2>';
+                    //hide spinner
+                    $('#loadingSpinner').hide();
+                    var htmlContent = `
+                    <div class="alert alert-primary alert-dismissible fade show" role="alert">
+                        <i class="bi bi-star me-1"></i> Found <strong> ${response.resultCount} </strong> text piece(s)
+                    </div>`;
                     htmlContent += '<hr width="50%" size="1" color="green" />';
                     response.results.forEach(function(group) {
                         var firstResult = group.results[0];
@@ -190,7 +90,7 @@
                         htmlContent += '</div>';  // Close content div
                         htmlContent += '</div>';  // Close document group div
                     });
-
+                    
                     $('#searchResults').html(htmlContent);
                     $('.collapsible').click(function() {
                         this.classList.toggle('active');
@@ -203,6 +103,8 @@
                     });
                 },
                 error: function(error) {
+                    //hide spinner
+                    $('#loadingSpinner').hide();
                     // Handle errors here
                     console.log(error);
                 }
@@ -214,120 +116,130 @@
             $('#queryForm').submit(performSearch);
         });
     </script>
-    <script>
-                document.addEventListener('DOMContentLoaded', (event) => {
-                document.getElementById("chatbotButton").onclick = function() {
-                    var chatWindow = document.getElementById("chatbotWindow");
-                    chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
-                };
-                });
-    </script>
-
+    <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Search Documents</h5>
         <form id="queryForm" name = "queryForm">
         <!-- Search Input -->
-        <input type="text" id="searchQuery" name="searchQuery" placeholder="Enter search keywords">
-
+        <div class="row mb-3">
+            <label for="id_document_type" class="col-sm-2 col-form-label">Serch Term</label>
+            <div class="col-sm-10">
+                <input type="text" id="searchQuery" name="searchQuery" placeholder="Enter search terms" class="form-control">
+            </div>
+        </div>
         <!-- Document Type Dropdown -->
-        <select id="documentType">
-            <option value="research_paper" selected>Research Paper</option>
-            <option value="research_book">Research Book</option>
-            <option value="personal_document">Personal Document</option>
-            <option value="others">Others</option>
-        </select>
-        <!-- Exact Match Toggle -->
-        <label for="exactMatch">Exact Match</label>
-        <input type="checkbox" id="exactMatch" name="exactMatch" checked>
-        
-        <!-- Semantic Search Toggle -->
-        <label for="semanticSearch">Semantic Search</label>
-        <input type="checkbox" id="semanticSearch" name="semanticSearch">
+        <div class="row mb-3">
+            <label for="id_document_type" class="col-sm-2 col-form-label">Document Type</label>
+            <div class="col-sm-10">
+                <select id="documentType" id="id_document_type" class="form-select">
+                    <option value="research_paper" selected>Research Paper</option>
+                    <option value="research_book">Research Book</option>
+                    <option value="personal_document">Personal Document</option>
+                    <option value="others">Others</option>
+                </select>
+            </div>
+        </div>
+
 
         
         <!-- Language Dropdown -->
-        <select id="language">
+        <div class="row mb-3">
+            <label for="id_document_type" class="col-sm-2 col-form-label">Document Language</label>
+            <div class="col-sm-10">
+        <select id="language"class = "form-select">
             <option value="cn">CN</option>
             <option value="en" selected>EN</option>
             <option value="fr">FR</option>
         </select>
+            </div>
+        </div>
 
-        <!-- Additional Criteria -->
-        <input type="text" id="author" placeholder="Author">
-        <input type="text" id="title" placeholder="Title">
-        <input type="text" id="subject" placeholder="Subject">
-        <input type="text" id="date" placeholder="Date">
-
-
-        <!-- Search Button -->
         
+        <div class="row mb-3">
+            <div class="col-sm-10">
+                <!-- Exact Match Toggle -->
+              <div class="form-check">
+                <label for="exactMatch" class="form-check-label" for="exactMatch">Exact Match</label>
+                <input type="checkbox" id="exactMatch" name="exactMatch" class="form-check-input">
+              </div>
+
+              <!-- Semantic Search Toggle -->
+              <div class="form-check">
+                <label for="semanticSearch" class="form-check-label" for="semanticSearch">Semantic Search</label>
+                <input type="checkbox" id="semanticSearch" name="semanticSearch" class="form-check-input">
+              </div>
+            </div>
+        </div>
+        
+        <!-- Additional Criteria -->
+        <div class="accordion accordion-flush" id="accordionFlushExample">
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="flush-headingOne">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+                  Optinal Criteria
+                </button>
+              </h2>
+              <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
+                <div class="accordion-body">
+                    <div class="row mb-3">
+                        <label for="id_document_type" class="col-sm-2 col-form-label">Title</label>
+                        <div class="col-sm-10">
+                            <input type="text" id="title" placeholder="Title" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                    <label for="id_document_type" class="col-sm-2 col-form-label">Author(WIP)</label>
+                    <div class="col-sm-10">
+                        <input type="text" id="author" placeholder="Author" class="form-control">
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label for="id_document_type" class="col-sm-2 col-form-label">Subject (WIP)</label>
+                    <div class="col-sm-10">
+                        <input type="text" id="subject" placeholder="Subject" class="form-control">
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label for="id_document_type" class="col-sm-2 col-form-label">Date (WIP)</label>
+                    <div class="col-sm-10">
+                        <input type="date" id="date" placeholder="Date" class="form-control">
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Document Tags (WIP)</label>
+                    <div class="col-sm-10">
+                      <select class="form-select" multiple aria-label="multiple select example">
+                        <option selected>Linguistic</option>
+                        <option value="1">Mathematics</option>
+                        <option value="2">Machine Learning</option>
+                        <option value="3">Others</option>
+                      </select>
+                    </div>
+                  </div>
+        </div>
+        </div>
+        </div>
+        </div>
+        <!-- Search Button -->
+        <br>
         <button onclick="performSearch()" class="btn btn-primary">Search</button>
         </form>
+        </div>
+
+    </div>
+    <div id="loadingSpinner" class="text-center" style="display: none;">
+        <div class="spinner-border" role="status">
+            <span class="sr-only">Searching...</span>
+        </div>
+    </div>
+    
     <!-- Search Results -->
     <div id="searchResults" name = "searchResults"></div>
 
 
-    <button id="chatbotButton">Chat</button>
 
-    <div id="chatbotWindow" class="window" style="display: none;">
-        <div class="window-top">
-            <button class="round green"></button><button class="round yellow"></button><button class="round red"></button>
-        </div>
-        <div class="window-content">
-            <iframe src="http://localhost:8501" class="chatIframe"></iframe>
-        </div>
-    </div>
         
-    <script>
-        function makeDraggable (element) {
-    // Make an element draggable (or if it has a .window-top class, drag based on the .window-top element)
-    let currentPosX = 0, currentPosY = 0, previousPosX = 0, previousPosY = 0;
 
-        // If there is a window-top classed element, attach to that element instead of full window
-    if (element.querySelector('.window-top')) {
-        // If present, the window-top element is where you move the parent element from
-        element.querySelector('.window-top').onmousedown = dragMouseDown;
-    } 
-    else {
-        // Otherwise, move the element itself
-        element.onmousedown = dragMouseDown;
-    }
-
-    function dragMouseDown (e) {
-        // Prevent any default action on this element (you can remove if you need this element to perform its default action)
-        e.preventDefault();
-        // Get the mouse cursor position and set the initial previous positions to begin
-        previousPosX = e.clientX;
-        previousPosY = e.clientY;
-        // When the mouse is let go, call the closing event
-        document.onmouseup = closeDragElement;
-        // call a function whenever the cursor moves
-        document.onmousemove = elementDrag;
-    }
-
-    function elementDrag (e) {
-        // Prevent any default action on this element (you can remove if you need this element to perform its default action)
-        e.preventDefault();
-        // Calculate the new cursor position by using the previous x and y positions of the mouse
-        currentPosX = previousPosX - e.clientX;
-        currentPosY = previousPosY - e.clientY;
-        // Replace the previous positions with the new x and y positions of the mouse
-        previousPosX = e.clientX;
-        previousPosY = e.clientY;
-        // Set the element's new position
-        element.style.top = (element.offsetTop - currentPosY) + 'px';
-        element.style.left = (element.offsetLeft - currentPosX) + 'px';
-    }
-
-    function closeDragElement () {
-        // Stop moving when mouse button is released and release events
-        document.onmouseup = null;
-        document.onmousemove = null;
-    }
-}
-
-makeDraggable(document.querySelector('#chatbotWindow'));
-
-</script>
 
 </body>
 </html>
-{% endblock %}

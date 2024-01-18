@@ -3,6 +3,8 @@
 <html>
 <head>
     <title>Scrollable PDF Viewer</title>
+    <script src="{% static 'pdfjs-express/webviewer.min.js' %}"></script>
+
     <style>
         #pdf-container {
             width: 100%;
@@ -26,7 +28,14 @@
 <body>
 
 <div id="pdf-container">
-<script type="module" src="{% static 'pdf_viewer.js' %}"></script>
+
+    <iframe
+  src="{% static 'pdfjs/web/viewer.html' %}?file={% static 'd42a0cd9-fdfd-4639-a38c-a85b08cd37a7.pdf' %}"
+  width="100vw"
+  height="100vh">
+</iframe>
+
+  
 </div>
 </body>
 </html>

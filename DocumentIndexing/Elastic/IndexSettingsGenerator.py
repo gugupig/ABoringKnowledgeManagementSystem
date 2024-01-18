@@ -16,7 +16,8 @@ class GeneralIndexSettings:
                     "metadata": {
                                      "type": "object",
                                      "dynamic": True  # Allows dynamic addition of fields within the object
-                                }
+                                },
+                    "Tags": {"type": "keyword"},
                 }
             }
         }

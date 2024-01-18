@@ -1,5 +1,6 @@
-{% extends 'base.html' %}
-{% block content %}
+<!-- Modified from extend base_tailwind.html -->
+
+{%load static%}
 <html>  
     <head>  
         <title>Document Upload</title>
@@ -20,61 +21,86 @@
             </style>
     </head>
     <body>
-        <form id="uploadForm" method="post" action="/document_upload/" enctype="multipart/form-data">
-            {% csrf_token %}
-            {{ form }}
-            <button type="submit" class="btn btn-primary">Upload</button>
-        </form>        
-        
-        <div id="spinner" style="display: none;">
-            <div class="loader"></div>
-        </div>        
-        <div id="uploadMessage" style="display: none;">Uploading, please wait... !!DO NOT REFRESH THE PAGE!!</div>
-        <div id="uploadStatus"></div> <!-- For displaying status messages -->
+        <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Upload document here</h5>
+              <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row mb-3">
+                    <label for="id_document_type" class="col-sm-2 col-form-label">Document Type</label>
+                    <div class="col-sm-10">
+                        <select name="document_type" id="id_document_type" class="form-select">
+                            {% for value, label in form.fields.document_type.choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label for="id_file" class="col-sm-2 col-form-label">File</label>
+                    <div class="col-sm-10">
+                        <input type="file" name="file" id="id_file" class="form-control">
+                    </div>
+                </div>
+                <!-- Add any other form fields here -->
+                <div class="row mb-3">
+                    <div class="col-sm-10 offset-sm-2">
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </div>
+                </div>
+            </form>
+             
+                    
+                    <div id="spinner" style="display: none;">
+                        <div class="loader"></div>
+                    </div>        
+                    <div id="uploadMessage" style="display: none;">Uploading, please wait... !!DO NOT REFRESH THE PAGE!!</div>
+                    <div id="uploadStatus"></div> <!-- For displaying status messages -->
 
-        <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                var uploadForm = document.getElementById('uploadForm');
-                uploadForm.addEventListener('submit', function(e) {
-                    e.preventDefault(); // Stop the form from submitting normally
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            var uploadForm = document.getElementById('uploadForm');
+                            uploadForm.addEventListener('submit', function(e) {
+                                e.preventDefault(); // Stop the form from submitting normally
 
-                    // Show the upload message and progress bar
-                    document.getElementById('uploadMessage').style.display = 'block';
-                    document.getElementById('spinner').style.display = 'block';
+                                // Show the upload message and progress bar
+                                document.getElementById('uploadMessage').style.display = 'block';
+                                document.getElementById('spinner').style.display = 'block';
 
-                    var formData = new FormData(uploadForm);
-                    var xhr = new XMLHttpRequest();
-                    xhr.open('POST', uploadForm.getAttribute('action'), true);
+                                var formData = new FormData(uploadForm);
+                                var xhr = new XMLHttpRequest();
+                                xhr.open('POST', uploadForm.getAttribute('action'), true);
 
-                    // CSRF token handling (assuming Django template)
-                    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                                // CSRF token handling (assuming Django template)
+                                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                                xhr.setRequestHeader('X-CSRFToken', csrfToken);
 
-                    xhr.onload = function() {
-                        // Hide the upload message and progress bar
-                        document.getElementById('uploadMessage').style.display = 'none';
-                        document.getElementById('spinner').style.display = 'none';
+                                xhr.onload = function() {
+                                    // Hide the upload message and progress bar
+                                    document.getElementById('uploadMessage').style.display = 'none';
+                                    document.getElementById('spinner').style.display = 'none';
 
-                        if (xhr.status === 200) {
-                            try {
-                                var response = JSON.parse(xhr.responseText);
-                                document.getElementById('uploadStatus').innerHTML = response.message;
-                            } catch (e) {
-                                document.getElementById('uploadStatus').innerHTML = 'Received non-JSON response';
-                            }
-                        } else {
-                            try {
-                                var errorResponse = JSON.parse(xhr.responseText);
-                                document.getElementById('uploadStatus').innerHTML = errorResponse.message;
-                            } catch (e) {
-                                document.getElementById('uploadStatus').innerHTML = 'Error during file upload';
-                            }
-                        }
-                    };
-                    xhr.send(formData);
-                });
-            });
-        </script>
+                                    if (xhr.status === 200) {
+                                        try {
+                                            var response = JSON.parse(xhr.responseText);
+                                            document.getElementById('uploadStatus').innerHTML = response.message;
+                                        } catch (e) {
+                                            document.getElementById('uploadStatus').innerHTML = 'Received non-JSON response';
+                                        }
+                                    } else {
+                                        try {
+                                            var errorResponse = JSON.parse(xhr.responseText);
+                                            document.getElementById('uploadStatus').innerHTML = errorResponse.message;
+                                        } catch (e) {
+                                            document.getElementById('uploadStatus').innerHTML = 'Error during file upload';
+                                        }
+                                    }
+                                };
+                                xhr.send(formData);
+                            });
+                        });
+                    </script>
+        </div>
+        </div>
     </body>
 </html>
-{% endblock %}

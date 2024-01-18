@@ -23,6 +23,7 @@ class Document:
         self.document_id = document_id
         self.file_path = file_path
         self.document_type = document_type
+        self.tags = []
         self.ElsaticIndexSetting = {}
         self.total_page_number = 1
 
@@ -52,6 +53,7 @@ class PDFDocument(Document):
         #self.toc = {}
         self.notes = ''
         self.language = ''
+        
 
     def process_document(self):
         self.text = extract_text_from_pdf(self.file_path)

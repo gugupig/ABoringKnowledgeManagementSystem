@@ -28,6 +28,7 @@ def upload_document_to_mongodb(document):
         'file_path': document.file_path,
         'upload_date': datetime.now(),
         'document_page_count': document.total_page_number,
+        'document_tags': document.tags,
     }
     if hasattr(document, 'text'):
         mongodocument['text'] = document.text

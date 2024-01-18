@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{%load static%}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -12,6 +13,11 @@
             padding: 0;
             display: flex;
         }
+        iframe {
+        width: 100%;       /* Fill the container width */
+        height: 100%;      /* Fill the container height */
+        border: none;      /* Remove any default border */
+}
         #file-selector {
             position: fixed; /* Fixed position */
             width: 250px; /* fixed width for the sidebar */
@@ -31,20 +37,17 @@
         }
 
         #main-container {
-            flex-grow: 1; /* Takes up the remaining space */
+            height: 100vh; /* Full viewport height */
+            width: 100vw; /* Full viewport width */
             display: flex;
-            transition: width 0.5s; /* Smooth transition for resizing main content */
+            flex-direction: row; /* Use column for vertical split */
+            align-items: stretch; /* Stretch children to fill the container */
         }
         #pdf_viewer {
-            flex-grow: 1; /* Allows PDF viewer to fill the space */
-            overflow-y: auto;
-            padding: 10px;
-        }
-        #chat-container {
-            width: 200%; /* fixed width for the chat container */
-            background-color: #f0f0f0;
-            overflow-y: auto;
-            padding: 10px;
+            flex-grow: 1; /* Allows the container to grow and take up all available space */
+            width: 100%; /* Ensures the container is full width */
+            height: 100%; /* Ensures the container is full height */
+            overflow: hidden; /* Hide scrollbars within the container */
         }
         #toggle-sidebar {
             cursor: pointer;
@@ -56,23 +59,16 @@
 </head>
 <body>
 
-    <div id="file-selector">
-        <!-- Code for file selector goes here -->
-        {% include 'file_list.html' %}
-    </div>
-
     <div id="main-container">
         <div id="pdf_viewer">
             <!-- Embedded PDF.js viewer goes here -->
-            {% include 'pdf_viewer.html' %}
+            <iframe
+            src="{% static 'pdfjs/web/viewer.html' %}?file={% static 'd42a0cd9-fdfd-4639-a38c-a85b08cd37a7.pdf' %}"
+            frameborder="0"
+            style="border: none; width: 100%; height: 100%;">
+            </iframe>
         </div>
 
-        <div id="chat-container">
-            <iframe src="http://localhost:8501" width="100%" class="chatIframe"></iframe>
-            <script type="text/javascript" language="javascript"> 
-                $('.chatIframe').css('height', $(window).height()+'px');
-                </script>
-        </div>
     </div>
 
     <button id="toggle-sidebar",class="btn btn-primary">File Selector</button>
@@ -89,3 +85,4 @@
 
 </body>
 </html>
+    

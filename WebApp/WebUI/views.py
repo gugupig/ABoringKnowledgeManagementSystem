@@ -11,6 +11,8 @@ from DocumentIndexing.Embedding.embedding_local import embeddings_multilingual
 def home(request):
     return render(request, 'homepage.html')  # or 'home.html' if extending base.html
 
+def wip(request):
+    return render(request, 'WIP_page.html')
 
 def document_upload_old(request):
     if request.method == 'POST':
@@ -39,8 +41,7 @@ def document_upload(request):
 
             # Process the file using document process pipeline
             pipeline = DocumentProcessPipeline()
-            pipeline.document_pipeline(file, document_type)  # Adjust as needed
-
+            document_id = pipeline.document_pipeline(file, document_type)  # Adjust as needed
             # Return a JSON response instead of rendering a page
             return JsonResponse({'status': 'success', 'message': 'File uploaded successfully'})
         else:
@@ -145,3 +146,5 @@ def byte_pdfview(request):
 
     return render(request, 'byte_pdfview.html', {'pdf_display': pdf_display})
 
+def chat(request):
+    return render(request, 'document_chat.html')
