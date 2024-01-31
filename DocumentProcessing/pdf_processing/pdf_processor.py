@@ -194,3 +194,4 @@ class SpacyPdfProcessor(PDFProcessor):
                 new_text += token.text_with_ws
 
         return new_text
+

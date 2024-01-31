@@ -28,7 +28,7 @@ class File_Manager:
             raise ValueError("Unsupported file type.")
 
         # Extract the file extension
-        _, extension = os.path.splitext(file.name)
+        file_name, extension = os.path.splitext(file.name)
 
         # Construct the path to the sub-folder based on document type
         folder_path = os.path.join(self.document_bank_root, document_type)
@@ -45,7 +45,7 @@ class File_Manager:
                 destination.write(chunk)
         extension = extension.replace('.','')
         document_class = self.file_type_mapping.get(f'{extension}document')
-        new_document = document_class(document_id, file_path, document_type)
+        new_document = document_class(document_id, file_path, document_type, file_name)
         return new_document
 
     def is_supported_file_type(self, file_name):

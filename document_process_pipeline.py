@@ -106,9 +106,10 @@ class DocumentProcessPipeline:
             document_doc = base_doc.copy()
             document_doc.update({
                 'document_title': document.metadata.get('Title', ''),
-                'document_summary': None,
+                'document_summary': document.document_summary,
                 'max_page_number': document.total_page_number,
                 'document_title_vector': embedder.embedding_listoftext([document.metadata.get('Title', '')], 'local')[0] if document.metadata.get('Title', '') else None,
+                'document_summary_vector': embedder.embedding_listoftext([document.metadata.get('Summary', '')], 'local')[0] if document.document_summary else None,
                 'text_piece_vector': np.zeros(EMBEDDING_DINENSION)
             })
 
@@ -183,10 +184,10 @@ class DocumentProcessPipeline:
         #Addition step: update metadata and tags
         if metadata and new_document.file_type == 'pdf':
             new_document.metadata['Title'] = metadata.get('title', new_document.metadata['Title'])
-            new_document.metadata['Author'] = metadata.get('author', new_document.metadata['Author'])
-            new_document.metadata['Subject'] = metadata.get('subject', new_document.metadata['Subject'])
-            new_document.metadata['Keywords'] = metadata.get('keywords', new_document.metadata['Keywords'])
-            new_document.metadata['Date'] = metadata.get('date', new_document.metadata['Date'])
+            new_document.metadata['Authors'] = metadata.get('author', new_document.metadata['Authors'])
+            new_document.metadata['Published'] = metadata.get('published', new_document.metadata['Published'])
+            new_document.metadata['Updated'] = metadata.get('updated', new_document.metadata['Updated'])
+            new_document.metadata['Categories'] = metadata.get('categories', new_document.metadata['Categories'])
         if tags:
             new_document.tags = tags
 

@@ -8,11 +8,12 @@ from DocumentProcessing.txt_processing.txt_processor import extract_text_from_tx
 from DocumentIndexing.Embedding.embedding import TextEmbedder
 from DocumentIndexing.Elastic.IndexSettingsGenerator import *
 from config import EMBEDDING_DINENSION
-from Utils.common_utils import detect_language    
+from Utils.common_utils import detect_language, is_valid_arxiv_id, get_arxiv_metadata  
 
 class Document:
-    def __init__(self, document_id, file_path, document_type):
+    def __init__(self, document_id, file_path, document_type,file_name):
         self.document_id = document_id
+        self.document_original_name = file_name
         self.file_path = file_path
         self.document_type = document_type
         self.tags = []
@@ -22,7 +23,7 @@ class Document:
         self.document_title = ''
         #self.document_summary_vector = ''
         #self.document_title_vector = ''
-
+            
     def process_document(self):
         raise NotImplementedError("This method should be implemented by subclass.")
     
@@ -35,20 +36,24 @@ class Document:
 class PDFDocument(Document):
     file_type = 'pdf'
 
-    def __init__(self, document_id, file_path, document_type):
-        super().__init__(document_id, file_path, document_type)
+    def __init__(self, document_id, file_path, document_type,file_name):
+        super().__init__(document_id, file_path, document_type,file_name)
         self.metadata = {}
         self.text = {}
         #self.toc = {}
         self.notes = ''
         self.language = ''
-        
+        self.summary = ''
 
     def process_document(self):
         processor = SpacyPdfProcessor(self.file_path)
         self.language = processor.language
         self.text = processor.extract_text_from_pdf()
-        self.metadata = processor.structured_metadata_for_paper()
+        if is_valid_arxiv_id(self.document_original_name):
+            self.metadata = get_arxiv_metadata(self.document_original_name)
+        else:
+            self.metadata = {'Title':processor.get_title(), 'Authors':[], 'Published':'','Updated':'','Summary':'','Categories':[]}
+        self.document_summary = self.metadata.pop('Summary', '')
         self.document_title = self.metadata.get('Title', '')
         #self.toc = extract_toc_from_pdf(self.file_path)
         self.notes = processor.extract_notes_from_pdf()
