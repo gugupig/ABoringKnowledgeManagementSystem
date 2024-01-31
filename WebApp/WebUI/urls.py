@@ -11,5 +11,6 @@ urlpatterns = [
     path('list_pdf_files/', views.list_pdf_files, name='list_pdf_files'),
     path('search/', views.search_documents, name='search'),
     path('chat/', views.chat, name='chat'),
+    path('document_manager/', views.document_manager, name='document_manager'),
     path('wip/', views.wip, name='wip'),
 ]

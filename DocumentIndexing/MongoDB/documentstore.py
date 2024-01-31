@@ -29,6 +29,9 @@ def upload_document_to_mongodb(document):
         'upload_date': datetime.now(),
         'document_page_count': document.total_page_number,
         'document_tags': document.tags,
+        'document_title': document.document_title,
+        'document_summary': document.document_summary,
+        'acheived': False,
     }
     if hasattr(document, 'text'):
         mongodocument['text'] = document.text
@@ -105,7 +108,7 @@ def update_document_in_mongodb(page_data, metadata,db_name,collection_name,docum
     # Return the unique ID of the updated document
     return result.upsertedocument_id
 
-def get_document_from_mongodb_id(db_name,collection_name,document_id):
+def get_document_from_mongodb_id(collection_name,document_id):
     """
     Gets a document from the MongoDB database 'ABKMS'.
 
@@ -116,10 +119,10 @@ def get_document_from_mongodb_id(db_name,collection_name,document_id):
     dict: A dictionary containing the document's metadata and page data.
     """
     # Connect to MongoDB (modify the connection string as per your MongoDB setup)
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient(MONGODB_HOST)
 
     # Access the database and collection
-    db = client[db_name]
+    db = client[MONGODB_DB]
     collection = db[collection_name]
 
     # Get the document from the collection
@@ -127,6 +130,34 @@ def get_document_from_mongodb_id(db_name,collection_name,document_id):
 
     # Return the document
     return document
+
+import json
+def get_document_from_collection(collection_name,output_to_file = False):
+    """
+    Gets a document from the MongoDB database 'ABKMS'.
+
+    Args:
+    document_id (ObjectId): The unique ID of the document to be retrieved.
+
+    Returns:
+    dict: A dictionary containing the document's metadata and page data.
+    """
+    # Connect to MongoDB (modify the connection string as per your MongoDB setup)
+    client = MongoClient(MONGODB_HOST)
+
+    # Access the database and collection
+    db = client[MONGODB_DB]
+    collection = db[collection_name]
+
+    # Get the document from the collection
+    documents = list(collection.find({},{'text': 0}))
+    if output_to_file:
+        with open(f"/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/document_list_cache/{collection_name}.json",'w') as f:
+            json.dump(documents,f,default=str,indent=4,ensure_ascii=False)
+
+    # Return the document
+    return documents
+
 
 if __name__ == "__main__":
     pass

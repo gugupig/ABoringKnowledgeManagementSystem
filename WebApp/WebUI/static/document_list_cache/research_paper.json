@@ -1,0 +1,82 @@
+[
+    {
+        "_id": "2610a7e7-359f-4e79-85d8-d3e3dff51dab",
+        "file_type": "pdf",
+        "file_path": "/root/gpt_projects/ABoringKnowledgeManagementSystem/DocumentBank/research_paper/2610a7e7-359f-4e79-85d8-d3e3dff51dab.pdf",
+        "upload_date": "2023-12-13 22:22:27.666000",
+        "document_page_count": 16,
+        "language": "en",
+        "metadata": {
+            "Author": "",
+            "ModDate": "28-05-2019",
+            "Keywords": "",
+            "Title": "",
+            "Subject": ""
+        },
+        "notes": []
+    },
+    {
+        "_id": "416f1ec4-bcbd-4204-9069-b6ea86c1b7a9",
+        "file_type": "pdf",
+        "file_path": "/root/gpt_projects/ABoringKnowledgeManagementSystem/DocumentBank/research_paper/416f1ec4-bcbd-4204-9069-b6ea86c1b7a9.pdf",
+        "upload_date": "2024-01-05 15:57:36.946000",
+        "document_page_count": 53,
+        "language": "en",
+        "metadata": {
+            "Author": "",
+            "ModDate": "23-11-2023",
+            "Keywords": "",
+            "Title": "",
+            "Subject": ""
+        },
+        "notes": []
+    },
+    {
+        "_id": "7c6890e0-2431-4efd-8cff-9f0a07c97c89",
+        "file_type": "pdf",
+        "file_path": "/root/gpt_projects/ABoringKnowledgeManagementSystem/DocumentBank/research_paper/7c6890e0-2431-4efd-8cff-9f0a07c97c89.pdf",
+        "upload_date": "2024-01-05 16:01:25.140000",
+        "document_page_count": 53,
+        "language": "en",
+        "metadata": {
+            "Author": "",
+            "ModDate": "23-11-2023",
+            "Keywords": "",
+            "Title": "",
+            "Subject": ""
+        },
+        "notes": []
+    },
+    {
+        "_id": "d42a0cd9-fdfd-4639-a38c-a85b08cd37a7",
+        "file_type": "pdf",
+        "file_path": "/root/gpt_projects/ABoringKnowledgeManagementSystem/DocumentBank/research_paper/d42a0cd9-fdfd-4639-a38c-a85b08cd37a7.pdf",
+        "upload_date": "2024-01-06 23:27:38.303000",
+        "document_page_count": 15,
+        "language": "en",
+        "metadata": {
+            "Author": "",
+            "ModDate": "03-08-2023",
+            "Keywords": "",
+            "Subject": "",
+            "Title": "Attention Is All You Need"
+        },
+        "notes": []
+    },
+    {
+        "_id": "e16fa42e-c9b3-4bd0-a75d-4dd23e23cdd9",
+        "file_type": "pdf",
+        "file_path": "/root/gpt_projects/ABoringKnowledgeManagementSystem/DocumentBank/research_paper/e16fa42e-c9b3-4bd0-a75d-4dd23e23cdd9.pdf",
+        "upload_date": "2024-01-06 23:38:24.488000",
+        "document_page_count": 53,
+        "language": "en",
+        "metadata": {
+            "Author": "",
+            "ModDate": "23-11-2023",
+            "Keywords": "",
+            "Subject": "",
+            "Title": "Orca 2: Teaching Small Language Models How to Reason"
+        },
+        "notes": []
+    }
+]

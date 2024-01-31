@@ -2,9 +2,13 @@
 # Create your views here.
 from django.shortcuts import render
 from .forms import DocumentForm
+import pickle
 from document_process_pipeline import DocumentProcessPipeline  # Import pipeline
 from DocumentIndexing.Elastic.search_engine import SearchEngine
-from DocumentIndexing.Embedding.embedding_local import embeddings_multilingual
+from DocumentIndexing.Embedding.embedding import TextEmbedder
+import sys
+sys.path.append('/root/gpt_projects/ABoringKnowledgeManagementSystem')
+from config import CROSS_DOCUMENT_SEARCH_CACHE_PATH
 
 
 
@@ -33,24 +37,45 @@ def document_upload_old(request):
 
 def document_upload(request):
     if request.method == 'POST':
-        form = DocumentForm(request.POST, request.FILES)
-        if form.is_valid():
+        print(request.POST)
+        #form = DocumentForm(request.POST, request.FILES)
+        #if form.is_valid():
             # Get the selected document type
-            document_type = form.cleaned_data['document_type']
-            file = request.FILES['file']
-
-            # Process the file using document process pipeline
-            pipeline = DocumentProcessPipeline()
-            document_id = pipeline.document_pipeline(file, document_type)  # Adjust as needed
-            # Return a JSON response instead of rendering a page
-            return JsonResponse({'status': 'success', 'message': 'File uploaded successfully'})
-        else:
+        #document_type = form.cleaned_data['document_type']
+        #document_tags = form.cleaned_data['document_tags']
+        document_type = request.POST.get('document_type')
+        document_tags = request.POST.getlist('document_tags')
+        file = request.FILES['file']
+        author = request.POST.get('author',None) if request.POST.get('author') != '' else None
+        title = request.POST.get('title',None) if request.POST.get('title') != '' else None
+        subject = request.POST.get('subject',None) if request.POST.get('subject') != '' else None
+        date = request.POST.get('date',None) if request.POST.get('date') != '' else None
+        keywords = request.POST.get('Keywords',None) if request.POST.get('Keywords') != '' else None
+        metadata = {'Author':author,'Title':title,'Subject':subject,'Date':date,'Keywords':keywords}
+        # Process the file using document process pipeline
+        pipeline = DocumentProcessPipeline()
+        document_id = pipeline.document_pipeline(file, document_type,metadata = metadata,tags = document_tags)  # Adjust as needed
+        # Return a JSON response instead of rendering a page
+        return JsonResponse({'status': 'success', 'message': 'File uploaded successfully'}) 
+        #else:
             # Return an error message if form is not valid
-            return JsonResponse({'status': 'error', 'message': 'Invalid form submission'}, status=400)
+            #return JsonResponse({'status': 'error', 'message': 'Invalid form submission'}, status=400)
 
     else:
         form = DocumentForm()
         return render(request, 'document_upload.html', {'form': form})
+
+from django.http import JsonResponse
+
+# WIP,use for dynamically extracting and displaying the document's metadata
+def file_selection_handler(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        file = request.FILES['file']
+
+        return JsonResponse({'message': 'Preliminary file check done'})
+
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
 
 def document_viewer(request):
     return render(request, 'document_viewer.html')
@@ -85,11 +110,13 @@ def list_pdf_files(request):
 
 
 def search_documents(request):
+    embedder = TextEmbedder()
+    tag_form = DocumentForm()
     if request.method == 'POST':
         print('Performing search...')
         # Extract data from the POST request
         search_query = request.POST.get('searchQuery',None) if request.POST.get('searchQuery') != '' else None
-        document_type = request.POST.get('documentType')
+        document_type = request.POST.get('documentType')+"_chunk_level" #For now,only support chunk level search
         language = request.POST.get('language','en')
         author = request.POST.get('author',None) if request.POST.get('author') != '' else None
         title = request.POST.get('title',None) if request.POST.get('title') != '' else None
@@ -97,17 +124,16 @@ def search_documents(request):
         date = request.POST.get('date',None) if request.POST.get('date') != '' else None
         semantic_search = True if request.POST.get('semanticSearch')=='true' else False
         exact_match = True if request.POST.get('exactMatch') == 'true' else False
-        additional_query = {}
-        for key,value in zip(['Author','Title','Subject',],[author,title,subject]):
-            if value != None:
-                additional_query[key] = value
+        keywords = request.POST.get('Keywords',None) if request.POST.get('Keywords') != '' else None
+        document_tags = request.POST.getlist('document_tags') # TODO Modify the search engine to support tags
+        additional_query = {key: value for key, value in zip(['Author', 'Title', 'Subject', 'Keyword'], [author, title, subject, keywords]) if value is not None}
         if search_query != None: 
-            print('Search query:', search_query, 'Document type:', document_type, 'Language:', language, 'Author:', author, 'Title:', title, 'Subject:', subject, 'Date:', date, 'Semantic search:', semantic_search, 'Exact match:', exact_match)
+            print('Search query:', search_query, 'Document type:', document_type, 'Language:', language, 'Author:', author, 'Title:', title, 'Subject:', subject, 'Date:', date, 'keywords', keywords ,'Semantic search:', semantic_search, 'Exact match:', exact_match)
             # Search the index
             search_engine = SearchEngine()
             if semantic_search:
                 print('Performing semantic search...')
-                vect = embeddings_multilingual(search_query)
+                vect =  embedder.embedding_listoftext([search_query],'local')[0]
                 search_results = search_engine.vector_search(index_name= document_type,query_vector=vect, language = language, additional_metadata=additional_query)
             else:
                 print('Performing term search...')
@@ -115,27 +141,33 @@ def search_documents(request):
             if search_results['hits']['hits']:
                 grouped_results = {}
                 for hit in search_results['hits']['hits']:
-                    doc_id = hit['_source']['document_id_universal']
+                    doc_id = hit['_source']['document_id_elastic']
                     if doc_id not in grouped_results:
                         grouped_results[doc_id] = []
                     grouped_results[doc_id].append({
-                        'Page_number': hit['_source']['original_page_number'],
+                        'Page_number': hit['_source']['page_number'],
                         'Text': hit['_source']['text_piece'],
                         'Metadata': hit['_source']['metadata']
                     })
 
                 search_results = [{'document_id': doc_id, 'results': docs} for doc_id, docs in grouped_results.items()]
                 result_count = sum(len(docs) for docs in grouped_results.values())
+                pickle.dump(search_results, open(CROSS_DOCUMENT_SEARCH_CACHE_PATH, 'wb'))
+                return JsonResponse({'results': search_results, 'resultCount': result_count})
             else:
+                print('No results found')
                 search_results = [{'Page_number': 'No results found', 'Text': 'No results found', 'Metadata': 'No results found'}]
-            print(search_results) 
+                pickle.dump(search_results, open(CROSS_DOCUMENT_SEARCH_CACHE_PATH, 'wb'))
+                return JsonResponse({'results': search_results, 'resultCount': 0})
+            #print(search_results) 
     # Return a JsonResponse or render a template with the search 
         else:
             search_results = [{'Page_number': 'No results found', 'Text': 'No results found', 'Metadata': 'No results found'}]
+            pickle.dump(search_results, open(CROSS_DOCUMENT_SEARCH_CACHE_PATH, 'wb'))
             return JsonResponse({'results': search_results, 'resultCount': 0})
-        return JsonResponse({'results': search_results, 'resultCount': result_count})
+       
     else:
-        return render(request, 'document_search.html')
+        return render(request, 'document_search.html',{'form': tag_form})
 
 import base64  
 def byte_pdfview(request):
@@ -148,3 +180,7 @@ def byte_pdfview(request):
 
 def chat(request):
     return render(request, 'document_chat.html')
+
+
+def document_manager(request):
+    return render(request, 'document_manager.html')

@@ -230,6 +230,11 @@
             </a>
           </li>
           <li>
+            <a href="{% url 'document_manager' %}" class="ajax-nav-link" data-url="{% url 'document_manager' %}">
+              <i class="bi bi-circle"></i><span>Manager</span>
+            </a>
+          </li>
+          <li>
             <a href="{% url 'search' %}" class="ajax-nav-link" data-url="{% url 'search' %}">
               <i class="bi bi-circle"></i><span>Search</span>
             </a>
@@ -244,22 +249,22 @@
         <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
             <a href="{% url 'chat' %}" class="ajax-nav-link" data-url="{% url 'chat' %}">
-              <i class="bi bi-circle"></i><span>With GPT-4</span>
+              <i class="bi bi-circle"></i><span>Chat History</span>
             </a>
           </li>
           <li>
             <a href="{% url 'wip' %}" class="ajax-nav-link" data-url="{% url 'wip' %}">
-              <i class="bi bi-circle"></i><span>With GLM-6B</span>
+              <i class="bi bi-circle"></i><span>WIP</span>
             </a>
           </li>
           <li>
             <a href="{%url 'wip' %}">
-              <i class="bi bi-circle"></i><span>With Llama-13B</span>
+              <i class="bi bi-circle"></i><span>WIP</span>  
             </a>
           </li>
           <li>
             <a href="{%url 'wip' %}">
-              <i class="bi bi-circle"></i><span>With Mistral-7B</span>
+              <i class="bi bi-circle"></i><span>WIP</span>
             </a>
           </li>
         </ul>
@@ -285,22 +290,22 @@
 
       <li class="nav-item">
         <a class="nav-link collapsed" data-bs-target="#charts-nav" data-bs-toggle="collapse" href="#">
-          <i class="bi bi-bar-chart"></i><span>Calendar</span><i class="bi bi-chevron-down ms-auto"></i>
+          <i class="bi bi-bar-chart"></i><span>Projects</span><i class="bi bi-chevron-down ms-auto"></i>
         </a>
         <ul id="charts-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
             <a href="{%url 'wip' %}">
-              <i class="bi bi-circle"></i><span>TO-DO List</span>
+              <i class="bi bi-circle"></i><span>TO-DO</span>
             </a>
           </li>
           <li>
             <a href="{%url 'wip' %}">
-              <i class="bi bi-circle"></i><span>Peronal Calendar</span>
+              <i class="bi bi-circle"></i><span>Peronal</span>
             </a>
           </li>
           <li>
             <a href="{%url 'wip' %}">
-              <i class="bi bi-circle"></i><span>Public Calendar</span>
+              <i class="bi bi-circle"></i><span>Others</span>
             </a>
           </li>
         </ul>

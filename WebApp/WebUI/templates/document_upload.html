@@ -42,6 +42,59 @@
                         <input type="file" name="file" id="id_file" class="form-control">
                     </div>
                 </div>
+                <div class="row mb-3">
+                    <label for="id_document_tags" class="col-sm-2 col-form-label">Document Tags</label>
+                    <div class="col-sm-10">
+                        <select name="document_tags" id="id_document_tags" class="form-select" multiple>
+                            {% for value, label in form.fields.tags.choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="accordion accordion-flush" id="accordionFlushExample">
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="flush-headingOne">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+                          Modify Metadata
+                        </button>
+                      </h2>
+                      <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
+                        <div class="accordion-body">
+                            <div class="row mb-3">
+                                <label for="id_document_meta" class="col-sm-2 col-form-label">Title</label>
+                                <div class="col-sm-10">
+                                    <input type="text" id="title" placeholder="Title" class="form-control">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                            <label for="id_document_meta" class="col-sm-2 col-form-label">Author(WIP)</label>
+                            <div class="col-sm-10">
+                                <input type="text" id="author" placeholder="Author" class="form-control">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label for="id_document_meta" class="col-sm-2 col-form-label">Subject (WIP)</label>
+                            <div class="col-sm-10">
+                                <input type="text" id="subject" placeholder="Subject" class="form-control">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label for="id_document_meta" class="col-sm-2 col-form-label">keywords (WIP)</label>
+                            <div class="col-sm-10">
+                                <input type="text" id="keywords" placeholder="Enter Kerywords divided by ," class="form-control">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label for="id_document_meta" class="col-sm-2 col-form-label">Date (WIP)</label>
+                            <div class="col-sm-10">
+                                <input type="date" id="date" placeholder="Date" class="form-control">
+                            </div>
+                        </div>
+                </div>
+                </div>
+                </div>
+                </div>
                 <!-- Add any other form fields here -->
                 <div class="row mb-3">
                     <div class="col-sm-10 offset-sm-2">
@@ -59,7 +112,7 @@
 
                     <script>
                         document.addEventListener("DOMContentLoaded", function() {
-                            var uploadForm = document.getElementById('uploadForm');
+                            var uploadForm = document.getElementById('uploadForm'); // The form
                             uploadForm.addEventListener('submit', function(e) {
                                 e.preventDefault(); // Stop the form from submitting normally
 
@@ -99,8 +152,8 @@
                                 xhr.send(formData);
                             });
                         });
-                    </script>
+                    </script>       
         </div>
-        </div>
+    </div>  
     </body>
 </html>

@@ -1,13 +1,14 @@
 # Description: This file is the main file for the document processing pipeline
 import os
+import numpy as np
 from DocumentIndexing.MongoDB import documentstore
 from DocumentIndexing.Elastic import search_engine
-from DocumentIndexing.Embedding import text_splitter
-from DocumentIndexing.Embedding.embedding_local import embeddings_multilingual
+from DocumentIndexing.Embedding.text_splitter import TextSplitter_Spacy
+from DocumentIndexing.Embedding.embedding import TextEmbedder
 from DocumentManagement.documents import Document
 from DocumentManagement.file_manager import File_Manager     
 from pymongo.errors import DuplicateKeyError   
-from config import ES_HOST, MONGODB_HOST, MONGODB_DB, DOCUMENTBANK_ROOT
+from config import ES_HOST, MONGODB_HOST, MONGODB_DB, DOCUMENTBANK_ROOT,EMBEDDING_DINENSION
 from Utils import common_utils
 from datetime import datetime
 import time
@@ -84,71 +85,88 @@ class DocumentProcessPipeline:
                 retries += 1
                 time.sleep(retry_delay)
         return upload_status
-    def split_document(self, document, max_retries=2, retry_delay=1):
-        split_status = False
-        retries = 0
-        while retries < max_retries:
-            try:
-                text_pieces = {key: text_splitter.split_text(content) for key, content in document.text.items()}
-                split_status = True
-                break
-            except Exception as e:
-                print(e)
-                retries += 1
-                time.sleep(retry_delay)
-        return split_status, text_pieces
+    
 
     def sub_pipeline_pagebypage(self, document):
+        text_splitter = TextSplitter_Spacy()
+        embedder = TextEmbedder()
         sub_pipeline_status = False
-        doc = {
-            'document_id_universal' : document.document_id,
+        base_doc = {
+            'document_id_elastic': document.document_id,
+            'document_id_universal' :document.document_id,
             'upload_date': int(datetime.now().timestamp() * 1000),
             'language': document.language,
             'document_tags': document.tags,
+            'metadata': document.metadata if document.file_type in ['pdf', 'docx'] else {},
+            'acheived': False,
+
         }
-        if document.file_type == 'pdf' or document.file_type == 'docx':
-            doc['metadata'] = document.metadata
+
+        if document.file_type in ['pdf', 'docx']:
+            document_doc = base_doc.copy()
+            document_doc.update({
+                'document_title': document.metadata.get('Title', ''),
+                'document_summary': None,
+                'max_page_number': document.total_page_number,
+                'document_title_vector': embedder.embedding_listoftext([document.metadata.get('Title', '')], 'local')[0] if document.metadata.get('Title', '') else None,
+                'text_piece_vector': np.zeros(EMBEDDING_DINENSION)
+            })
+
             for page_number, page_text in document.text.items():
-                splited_text_pagebypage = text_splitter.split_text_with_langchain(page_text)
-                splited_embedding_pagebypage = embeddings_multilingual(splited_text_pagebypage)
+                splited_text_pagebypage = text_splitter.chunk_sentences_with_sentence_overlap(page_text,128,1,True)
+                splited_embedding_pagebypage = embedder.embedding_listoftext(splited_text_pagebypage, 'local')
+                page_doc = {
+                    **base_doc,
+                    'document_id_elastic': f'{document.document_id}_{page_number}',
+                    'text_piece_vector': np.mean(splited_embedding_pagebypage, axis=0),
+                    'text_piece': page_text,
+                    'page_number': page_number,
+                    'max_split_number': len(splited_text_pagebypage)
+                }
+                self.search_engine.index_document(document.document_type+'_page_level', page_doc)
                 print(f'{page_number}/{len(document.text)}')
+
                 for split_no, (split_text, embedding) in enumerate(zip(splited_text_pagebypage, splited_embedding_pagebypage)):
-                    doc['document_id_elastic'] = document.document_id + '_' + str(page_number) + '_' + str(split_no)
-                    doc['original_page_number'] = page_number
-                    doc['text_piece'] = split_text
-                    doc['text_piece_vector'] = embedding
-                    self.search_engine.index_document(document.document_type, doc)
+                    chunk_doc = {
+                        **base_doc,
+                        'document_id_elastic': f'{document.document_id}_{page_number}_{split_no + 1}',
+                        'page_number': page_number,
+                        'chunk_number': split_no + 1,
+                        'text_piece': split_text,
+                        'text_piece_vector': embedding,
+                        'max_split_number': len(splited_text_pagebypage)
+                    }
+                    self.search_engine.index_document(document.document_type+'_chunk_level', chunk_doc)
+
+                document_doc['text_piece_vector'] += page_doc['text_piece_vector']
+
+            document_doc['text_piece_vector'] /= len(document.text)
+            self.search_engine.index_document(document.document_type+'_document_level', document_doc)
+        #WIP : Other file type support need to be added   
         else:
             split_text =  text_splitter.split_text_with_langchain(document.text[1])
-            splited_embedding_pagebypage = embeddings_multilingual(split_text)
+            splited_embedding_pagebypage = embedder.embedding_listoftext(split_text,'local')
+            max_split_nb = len(split_text)
             for split_no, (split_text, embedding) in enumerate(zip(splited_text_pagebypage, splited_embedding_pagebypage)):
-                doc['original_page_number'] = 1
-                doc['document_id_elastic'] = document.document_id + '_' + str(1) + '_' + str(split_no)
-                doc['text_piece'] = split_text
-                doc['text_piece_vector'] = embedding
-                self.search_engine.index_document(document.document_type, doc)
-        sub_pipeline_status = True
-        return sub_pipeline_status
+                base_doc['original_page_number'] = 1
+                base_doc['document_id_elastic'] = document.document_id + '_' + str(1) + '_' + str(split_no) #+ '_' + str(max_split_nb)
+                base_doc['text_piece'] = split_text
+                base_doc['text_piece_vector'] = embedding
+                self.search_engine.index_document(document.document_type,base_doc)
 
-    #THIS IS NOT WORKING, NEED TO BE FIXED
-    def sub_pipeline_bulk(self, document):
-        sub_pipeline_status = False
-        splited_text_bulk = {}
-        for page_number,page_text in document.text.items():
-            splited_text =  text_splitter.split_text_with_langchain(page_text)
-            splited_text_bulk[page_number] = (splited_text,embeddings_multilingual(splited_text))
-        self.search_engine.bulk_index_documents(document.document_id, splited_text_bulk)
         sub_pipeline_status = True
         return sub_pipeline_status
 
 
-    def document_pipeline(self, file, document_type,metadata = None):
+
+    def document_pipeline(self, file, document_type,metadata = None,tags = None):
         # Generate unique document ID at the beginning
         document_id = self.common_utils.generate_document_id()
 
 
         # Step 1: Upload document to DocumentBank
         upload_to_bank_status,new_document = self.upload_document_documentbank(file,document_type, document_id)
+
 
 
         if not upload_to_bank_status:
@@ -162,6 +180,15 @@ class DocumentProcessPipeline:
             print("Document extraction failed.")
             return False
 
+        #Addition step: update metadata and tags
+        if metadata and new_document.file_type == 'pdf':
+            new_document.metadata['Title'] = metadata.get('title', new_document.metadata['Title'])
+            new_document.metadata['Author'] = metadata.get('author', new_document.metadata['Author'])
+            new_document.metadata['Subject'] = metadata.get('subject', new_document.metadata['Subject'])
+            new_document.metadata['Keywords'] = metadata.get('keywords', new_document.metadata['Keywords'])
+            new_document.metadata['Date'] = metadata.get('date', new_document.metadata['Date'])
+        if tags:
+            new_document.tags = tags
 
 
         # Step 3: Upload document to MongoDB

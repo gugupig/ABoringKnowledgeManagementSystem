@@ -122,7 +122,7 @@
         <form id="queryForm" name = "queryForm">
         <!-- Search Input -->
         <div class="row mb-3">
-            <label for="id_document_type" class="col-sm-2 col-form-label">Serch Term</label>
+            <label for="id_searchQuery" class="col-sm-2 col-form-label">Serch Term</label>
             <div class="col-sm-10">
                 <input type="text" id="searchQuery" name="searchQuery" placeholder="Enter search terms" class="form-control">
             </div>
@@ -144,7 +144,7 @@
         
         <!-- Language Dropdown -->
         <div class="row mb-3">
-            <label for="id_document_type" class="col-sm-2 col-form-label">Document Language</label>
+            <label for="id_document_lang" class="col-sm-2 col-form-label">Document Language</label>
             <div class="col-sm-10">
         <select id="language"class = "form-select">
             <option value="cn">CN</option>
@@ -182,25 +182,31 @@
               <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
                 <div class="accordion-body">
                     <div class="row mb-3">
-                        <label for="id_document_type" class="col-sm-2 col-form-label">Title</label>
+                        <label for="id_document_meta" class="col-sm-2 col-form-label">Title</label>
                         <div class="col-sm-10">
                             <input type="text" id="title" placeholder="Title" class="form-control">
                         </div>
                     </div>
                     <div class="row mb-3">
-                    <label for="id_document_type" class="col-sm-2 col-form-label">Author(WIP)</label>
+                    <label for="id_document_meta" class="col-sm-2 col-form-label">Author(WIP)</label>
                     <div class="col-sm-10">
                         <input type="text" id="author" placeholder="Author" class="form-control">
                     </div>
                 </div>
                 <div class="row mb-3">
-                    <label for="id_document_type" class="col-sm-2 col-form-label">Subject (WIP)</label>
+                    <label for="id_document_meta" class="col-sm-2 col-form-label">Subject (WIP)</label>
                     <div class="col-sm-10">
                         <input type="text" id="subject" placeholder="Subject" class="form-control">
                     </div>
                 </div>
                 <div class="row mb-3">
-                    <label for="id_document_type" class="col-sm-2 col-form-label">Date (WIP)</label>
+                    <label for="id_document_meta" class="col-sm-2 col-form-label">keywords (WIP)</label>
+                    <div class="col-sm-10">
+                        <input type="text" id="keywords" placeholder="Enter Kerywords divided by ," class="form-control">
+                    </div>
+                </div>  
+                <div class="row mb-3">
+                    <label for="id_document_meta" class="col-sm-2 col-form-label">Date (WIP)</label>
                     <div class="col-sm-10">
                         <input type="date" id="date" placeholder="Date" class="form-control">
                     </div>
@@ -208,12 +214,12 @@
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Document Tags (WIP)</label>
                     <div class="col-sm-10">
-                      <select class="form-select" multiple aria-label="multiple select example">
-                        <option selected>Linguistic</option>
-                        <option value="1">Mathematics</option>
-                        <option value="2">Machine Learning</option>
-                        <option value="3">Others</option>
-                      </select>
+                        <select name="document_tags" id="id_document_tags" class="form-select" multiple>
+                            {% for value, label in form.fields.tags.choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+            
                     </div>
                   </div>
         </div>

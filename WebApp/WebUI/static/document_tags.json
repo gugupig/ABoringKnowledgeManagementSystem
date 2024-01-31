@@ -1,0 +1,12 @@
+{
+    "tags": [
+      {"id": "1", "name": "Linguistics"},
+      {"id": "2", "name": "Linguistics>Phonetics"},
+      {"id": "3", "name": "Linguistics>Phonology"},
+      {"id": "4", "name": "Linguistics>Morphology"},
+      {"id": "5", "name": "Linguistics>Syntax"},
+      {"id": "6", "name": "Linguistics>Semantics"},
+      {"id": "7", "name": "Linguistics>Pragmatics"}
+    ]
+  }
+  
