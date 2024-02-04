@@ -1,10 +1,19 @@
 import openai
 import toml
-from sentence_transformers import SentenceTransformer
+from config import TEXT_SPLIT_SIZE
+
 
 class TextEmbedder:
-    def __init__(self, local_model_name='sentence-transformers/distiluse-base-multilingual-cased-v2', config_file='/root/gpt_projects/ABoringKnowledgeManagementSystem/DocumentIndexing/Embedding/secrets.toml'):
-        self.local_model = SentenceTransformer(local_model_name)
+    def __init__(self, local_model_name='BAAI/bge-m3', config_file='/root/gpt_projects/ABoringKnowledgeManagementSystem/DocumentIndexing/Embedding/secrets.toml'):
+        self .local_model_name = local_model_name
+        if self. local_model_name  == 'sentence-transformers/distiluse-base-multilingual-cased-v2':
+            print('Embedding dimension: 512')
+            from sentence_transformers import SentenceTransformer
+            self.local_model = SentenceTransformer(local_model_name)
+        elif self.local_model_name == 'BAAI/bge-m3':
+            print('Embedding dimension: 1024')
+            from FlagEmbedding import BGEM3FlagModel
+            self.local_model = BGEM3FlagModel(self.local_model_name,use_fp16=True)
         self.config = self.load_config(config_file)
         openai.api_key = self.config["openai"]["api_key"]
 
@@ -17,7 +26,10 @@ class TextEmbedder:
         return [embedding['embedding'] for embedding in response['data']]
 
     def embeddings_multilingual(self, sentences):
-        return self.local_model.encode(sentences)
+        if self.local_model_name == 'sentence-transformers/distiluse-base-multilingual-cased-v2':
+            return self.local_model.encode(sentences)
+        elif self.local_model_name == 'BAAI/bge-m3':
+            return self.local_model.encode(sentences, return_dense=True, return_sparse=False, return_colbert_vecs=False,max_length = TEXT_SPLIT_SIZE )['dense_vecs']
 
     def embedding_listoftext(self, text_list, embedding_type='local'):
         if embedding_type == 'local':
@@ -38,4 +50,5 @@ class TextEmbedder:
                 yield self.embed_texts([text])[0]
         else:
             raise ValueError(f'Invalid embedding type: {embedding_type}')
+        
 

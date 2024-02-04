@@ -20,7 +20,7 @@ PDF_VIEWER_CACHE_PATH = "/root/gpt_projects/ABoringKnowledgeManagementSystem/Web
 CROSS_DOCUMENT_SEARCH_CACHE_PATH = "/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/cross_document_search_cache/cross_document_search_cache.pkl"
 
 
-EMBEDDING_DINENSION = 512
+EMBEDDING_DINENSION = 1024
 TEXT_SPLIT_SIZE = 512
 LANGUAGE_CODE = ['en','fr','zh-cn','zh-tw']
 
