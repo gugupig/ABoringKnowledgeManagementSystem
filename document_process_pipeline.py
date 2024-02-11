@@ -4,7 +4,7 @@ import numpy as np
 from DocumentIndexing.MongoDB import documentstore
 from DocumentIndexing.Elastic import search_engine
 from DocumentIndexing.Embedding.text_splitter import TextSplitter_Spacy
-from DocumentIndexing.Embedding.embedding import TextEmbedder
+from DocumentIndexing.Embedding import embedding as embedder
 from DocumentManagement.documents import Document
 from DocumentManagement.file_manager import File_Manager     
 from pymongo.errors import DuplicateKeyError   
@@ -89,7 +89,6 @@ class DocumentProcessPipeline:
 
     def sub_pipeline_pagebypage(self, document):
         text_splitter = TextSplitter_Spacy()
-        embedder = TextEmbedder()
         sub_pipeline_status = False
         base_doc = {
             'document_id_elastic': document.document_id,

@@ -52,6 +52,8 @@ def upload_document_to_mongodb(document):
     # Return the unique ID of the inserted document
     return result
 
+
+
 def delete_document_from_mongodb(db_name,collection_name,document_id):
     """
     Deletes a document from the MongoDB database 'ABKMS'.

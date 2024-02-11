@@ -1,26 +1,33 @@
+import sys
+sys.path.append('/root/gpt_projects/ABoringKnowledgeManagementSystem')
 from DocumentIndexing.Elastic import search_engine
-from DocumentIndexing.Embedding.embedding_local import embeddings_multilingual as embed
+from DocumentIndexing.Embedding import embedding as embedder
 
 
-def search_one_document(prompt,document_id,index_name='research_paper',return_top_n=1):
+def search_one_document(prompt,document_id,index_name='research_paper_chunk_level',return_top_n=1):
     orgnized_results = []
     new_search_engine = search_engine.SearchEngine()
-    embedded_query = embed(prompt)
+    embedded_query = embedder.embedding_listoftext([prompt],'local')[0]
     search_results = new_search_engine.vector_search(index_name=index_name, query_vector=embedded_query,document_id=document_id)
     if search_results['hits']['hits']:
         if len(search_results['hits']['hits']) >= return_top_n:
             search_results = search_results['hits']['hits'][:return_top_n]
         else:
             search_results = search_results['hits']['hits']
-    for hit in search_results:
-        orgnized_results.append({'Page_number': hit['_source']['original_page_number'],
-                                 'Text': hit['_source']['text_piece'],
-                                 'Metadata': hit['_source']['metadata']})
-    return orgnized_results
+        for hit in search_results:
+            orgnized_results.append({'Page_number': hit['_source']['page_number'],
+                                    'Text': hit['_source']['text_piece'],
+                                    'Metadata': hit['_source']['metadata']})
+        return orgnized_results
+    else:
+        print('No result found.')
+        return 'No result found.'
         
 
 
 def one_document_prompt(orgnized_results):
+    if not orgnized_results:
+        return "No result found."
     prompt = """Context:"""
     for i in range(len(orgnized_results)):
         prompt += f"\n{i+1}: {orgnized_results[i]['Text']}"
@@ -28,7 +35,7 @@ def one_document_prompt(orgnized_results):
 
 def two_step_retrival_page (prompt,document_id,index_name='research_paper',return_top_n=1):
     new_search_engine = search_engine.SearchEngine()
-    embedded_query = embed(prompt)
+    embedded_query = embedder.embedding_listoftext([prompt],'local')[0]
     first_step =  new_search_engine.vector_search(index_name=index_name, query_vector=embedded_query,document_id=document_id)
     second_step = {}
     if first_step['hits']['hits']:
@@ -51,7 +58,7 @@ def two_step_prompt_page(second_step):
 #WIP
 def two_step_retrival_adjacents(prompt,document_id,index_name='research_paper',return_top_n=1,adjacent_window=2):
     new_search_engine = search_engine.SearchEngine()
-    embedded_query = embed(prompt)
+    embedded_query = embedder.embedding_listoftext([prompt],'local')[0]
     first_step =  new_search_engine.vector_search(index_name=index_name, query_vector=embedded_query,document_id=document_id)
     if first_step['hits']['hits']:
         most_relevant_piece = [hit['_source']['document_id_elastic'] for hit in first_step['hits']['hits']]

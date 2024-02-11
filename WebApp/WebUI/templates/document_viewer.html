@@ -23,22 +23,22 @@
             width: 250px; /* fixed width for the sidebar */
             height: 100%; /* Full height */
             background-color: #f7f7f7;
-            border-right: 2px solid #dddddd;
+            border-left: 2px solid #dddddd;
             overflow-y: auto;
-            transition: left 0.5s; /* Smooth transition for toggling */
+            transition: right 0.5s; /* Smooth transition for toggling */
             z-index: 100; /* Ensures it stays on top */
-            top: 0;
-            left: 0; /* Adjusted by JavaScript */
+            top: 150px;  /* Adjusted by JavaScript */
+            right: 0 ; /* Adjusted by JavaScript */
         }
 
         #file-selector.hidden {
-            left: -250px; /* Hide by moving to the left */
-            overflow-x: hidden;
+            right: -250px; /* Hide by moving to the left */
+            overflow-x: auto;
         }
 
         #main-container {
             height: 100vh; /* Full viewport height */
-            width: 100vw; /* Full viewport width */
+            width: 99vw; /* Full viewport width */
             display: flex;
             flex-direction: row; /* Use column for vertical split */
             align-items: stretch; /* Stretch children to fill the container */
@@ -47,7 +47,7 @@
             flex-grow: 1; /* Allows the container to grow and take up all available space */
             width: 100%; /* Ensures the container is full width */
             height: 100%; /* Ensures the container is full height */
-            overflow: hidden; /* Hide scrollbars within the container */
+            overflow: auto; /* Hide scrollbars within the container */
         }
         #toggle-sidebar {
             cursor: pointer;
@@ -55,15 +55,58 @@
             left: 250px;
             top: 10px;
         }
-    </style>
+        .footer {
+            display: none;
+        }
+        body, html {
+        overflow: hidden;
+        }
+            </style>    
+    <button id="toggle-sidebarx" class="btn btn-primary">Documents =></button>
+    <link href="{% static 'assets/vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/style.css' %}" rel="stylesheet">
 </head>
 <body>
+    
+    <aside
+        id="file-selector"
+        class="hidden"
+        > 
+        <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Document List</h5>
+        <div class="accordion accordion-flush" id="accordionFlushExample">
+            {% for category, documents in categories.items %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="flush-heading{{ forloop.counter }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapse{{ forloop.counter }}" aria-expanded="false" aria-controls="flush-collapse{{ forloop.counter }}">
+                        {{ category }}
+                    </button>
+                </h2>
+                <div id="flush-collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="flush-heading{{ forloop.counter }}" data-bs-parent="#accordionFlushExample">
+                    <div class="accordion-body">
+                        <ul>
+                            {% for name, url in documents %}
+                            <li><a href="#" onclick="viewDocument('{{ url }}'); return false;">{{ name }}</a></li>
+                            <hr class="dashed">
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        </div>
+        </div>
+    </aside>
 
     <div id="main-container">
         <div id="pdf_viewer">
+            
             <!-- Embedded PDF.js viewer goes here -->
             <iframe
-            src="{% static 'pdfjs/web/viewer.html' %}?file={% static 'd42a0cd9-fdfd-4639-a38c-a85b08cd37a7.pdf' %}"
+            id = "documentIframe"
+            src="{% static 'pdfjs/web/viewer.html' %}?file={% static 'd42a0cd9-fdfd-4639-a38c-a85b08cd37a7.pdf' %}&page=2"
             frameborder="0"
             style="border: none; width: 100%; height: 100%;">
             </iframe>
@@ -71,17 +114,48 @@
 
     </div>
 
-    <button id="toggle-sidebar",class="btn btn-primary">File Selector</button>
+    
 
     <script>
-        document.getElementById('toggle-sidebar').onclick = function() {
-            var fileSelector = document.getElementById('file-selector');
-            var toggleButton = document.getElementById('toggle-sidebar');
-            fileSelector.classList.toggle('hidden');
-            // Adjust button position based on the sidebar's visibility
-            toggleButton.style.left = fileSelector.classList.contains('hidden') ? '0' : '250px';
-        };
+        // Get the sidebar and the main container
+        var sidebar_1 = document.getElementById('file-selector');
+        var mainContainer = document.getElementById('main-container');
+        var toggleSidebar = document.getElementById('toggle-sidebarx');
+        // Add an event listener to the toggle button
+        toggleSidebar.addEventListener('click', () => {
+            // Toggle the hidden class on the sidebar
+            sidebar_1.classList.toggle('hidden');
+            // Adjust the left position of the main container
+            mainContainer.style.left = sidebar_1.classList.contains('hidden') ? '0' : '250px';
+        });
     </script>
+
+<script>
+    function viewDocument(documentUrl) {
+        var viewerBasePath = "{% static 'pdfjs/web/viewer.html' %}?file=";
+        document.getElementById('documentIframe').src = viewerBasePath + encodeURIComponent(documentUrl);
+    
+        // Extract the document ID from the URL
+        var documentId = documentUrl.split('/').pop().split('.').shift();
+        var category = documentUrl.split('/')[2];
+    
+        // Prepare data to be sent in the POST request
+        var data = new FormData();
+        data.append('document_id', documentId);
+        data.append('category', category);
+    
+        // Send the POST request to the Django view
+        fetch('/write_pdf_viewer_cache/', {  // Update URL as necessary
+            method: 'POST',
+            body: data
+        })
+        .then(response => response.json())
+        .then(data => console.log(data.status))
+        .catch(error => console.error('Error:', error));
+    }
+    </script>
+    
+    
 
 </body>
 </html>

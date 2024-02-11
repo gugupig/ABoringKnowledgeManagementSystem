@@ -231,7 +231,7 @@
           </li>
           <li>
             <a href="{% url 'document_manager' %}" class="ajax-nav-link" data-url="{% url 'document_manager' %}">
-              <i class="bi bi-circle"></i><span>Manager</span>
+              <i class="bi bi-circle"></i><span>Manager(WIP)</span>
             </a>
           </li>
           <li>
@@ -249,12 +249,12 @@
         <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
             <a href="{% url 'chat' %}" class="ajax-nav-link" data-url="{% url 'chat' %}">
-              <i class="bi bi-circle"></i><span>Chat History</span>
+              <i class="bi bi-circle"></i><span>Chat with database</span>
             </a>
           </li>
           <li>
             <a href="{% url 'wip' %}" class="ajax-nav-link" data-url="{% url 'wip' %}">
-              <i class="bi bi-circle"></i><span>WIP</span>
+              <i class="bi bi-circle"></i><span>Chat History</span>
             </a>
           </li>
           <li>
@@ -330,7 +330,7 @@
         <button class="round green"></button><button class="round yellow"></button><button class="round red"></button>
     </div>
     <div class="window-content">
-        <iframe src="http://194.163.147.140:8501" width="100%" frameborder= "0" class="chatIframe"></iframe>
+        <iframe src="http://194.163.147.140:8501/Chatbot_widget" width="100%" frameborder= "0" class="chatIframe"></iframe>
     </div>
 </div>
   <main id="main" class="main">
@@ -382,24 +382,28 @@
 
   <!-- ajax-nav-link : load the page without refreshing --> 
   <script>
-    $(document).ready(function() {
-      $('.ajax-nav-link').click(function(event) {
-        event.preventDefault(); // Prevent default link behavior
-    
-        var url = $(this).data('url'); // Get the URL from the data-url attribute
-    
-        $.ajax({
-          url: url,
-          success: function(data) {
-            $('#main').html(data); // Update the main content area with the response
-          },
-          error: function() {
-            console.log('Error loading content');
-          }
-        });
+  $(document).ready(function() {
+    $('.ajax-nav-link').click(function(event) {
+      event.preventDefault(); // Prevent default link behavior
+
+      var url = $(this).data('url'); // Get the URL from the data-url attribute
+
+      $.ajax({
+        url: url,
+        success: function(data) {
+          $('#main').html(data); // Update the main content area with the response
+
+          // Clear the specific const variable "sidebar_1"
+          eval('const sidebar_1 = undefined;');
+        },
+        error: function() {
+          console.log('Error loading content');
+        }
       });
     });
-  </script>
+  });
+</script>
+
 
   <!-- make Chatbot Window draggable -->
   <script>
@@ -461,6 +465,7 @@
 });
 
   </script>
+
 
 </body>
 

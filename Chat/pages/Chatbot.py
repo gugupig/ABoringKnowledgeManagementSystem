@@ -14,7 +14,7 @@ os.environ['PYTHONPATH'] = f"{os.environ.get('PYTHONPATH')}:/root/gpt_projects/A
 chat_bot_statut = pickle.load(open(CHAT_BOT_STATUT_CACHE_PATH, 'rb'))
 pdf_file = pickle.load(open(PDF_VIEWER_CACHE_PATH, 'rb'))
 pdf_file_id = pdf_file[0]
-pdf_file_index = pdf_file[1]
+pdf_file_index = pdf_file[1]+"_chunk_level"
 chat_bot_statut_text = f" {chat_bot_statut} Mode"
 if chat_bot_statut == 'PDF VIEWER':
     pdf_file_text = f"Chat bot is on the document : {pdf_file_id} "
@@ -62,7 +62,10 @@ with st.sidebar:
     max_value=10,                     # Maximum value
     value=0                        # Default value
     )
-    send_full_history = st.toggle("Send full chat history", False)
+    send_full_history = st.toggle("Send full chat history (WIP)", False)
+    reranker = st.toggle("Use Reranker (WIP)", False)
+    advanced_RAG = st.toggle("Use Advanced RAG (WIP)", False)
+    graph_tool = st.toggle("Show Graph tool (WIP)", False)
     rag_option = st.selectbox(
         'RAG Strategy',
         ['Single Text piece', 'Page', 'Text Piece Adjacents'])
@@ -111,6 +114,47 @@ if "messages" not in st.session_state:
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+from SL_ReactFlow import SL_ReactFlow
+import pickle
+if graph_tool:
+    if 'numClicks' not in st.session_state:
+        st.session_state['numClicks'] = 0
+
+    if 'lastButtonClick' not in st.session_state:
+        st.session_state['lastButtonClick'] = None
+
+    if 'canvas' not in st.session_state:
+        st.session_state['canvas'] = {'nodes': [], 'edges':[]}
+
+    if 'last_canvas' not in st.session_state: 
+        st.session_state['last_canvas'] = {'nodes': [], 'edges':[]}
+
+    canvas_cahche = st.session_state.get('last_canvas', {'nodes': [], 'edges':[]})
+    label = st.text_input('Enter the label of the button')
+    if st.button('Add Node', key="Add Node"):
+        st.session_state['numClicks'] = st.session_state.get('numClicks', 0) + 1
+        st.session_state['lastButtonClick'] = 'Add Node'
+
+    if st.button('Load Canvas', key="Load Canvas"):
+        st.session_state['numClicks'] = st.session_state.get('numClicks', 0) + 1
+        st.session_state['lastButtonClick'] = 'Load Canvas'
+        canvas_cahche = st.session_state.get('canvas', {'nodes': [], 'edges':[]})
+
+
+
+    cs = {'width': '100vw', 'height': 1000}
+    canvas = SL_ReactFlow('K-MAP',
+                    canvasStyle=cs,
+                    label=label, 
+                    numClicks=st.session_state.get('numClicks', 0), 
+                    lastClickButton=st.session_state.get('lastButtonClick', None),
+                    canvas = canvas_cahche,
+                    key="graph_component",
+                    )
+    if isinstance(canvas, dict) and any(value for value in canvas.values()):
+        st.session_state['canvas'] = canvas_cahche
+
+
 
 # Handling user input and context integration
 if prompt := st.chat_input("?"):
@@ -124,7 +168,7 @@ if prompt := st.chat_input("?"):
                 context_appended = True
                 if rag_option == 'Single Text piece':
                     rag_search_results = search_one_document(prompt, document_id=pdf_file_id, index_name=pdf_file_index, return_top_n=rag_number)
-                    retrieved_page_nb = [hit['Page_number'] for hit in rag_search_results]
+                    retrieved_page_nb = [hit['Page_number'] for hit in rag_search_results] if rag_search_results else 'No result found.'
                     context = one_document_prompt(rag_search_results)
                     prompt = f"{context}\n Question: {prompt}"
                 elif rag_option == 'Page':

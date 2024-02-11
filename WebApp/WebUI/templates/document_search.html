@@ -13,7 +13,9 @@
             background-color: yellow; 
             font-weight: bold; 
         }
+
     </style> 
+    
 </head>
 <body>
     <script>
@@ -42,6 +44,7 @@
             var data = {
                 searchQuery: $('#searchQuery').val(),
                 documentType: $('#documentType').val(),
+                searchDepth: $('#searchDepth').val(),
                 language: $('#language').val(),
                 author: $('#author').val(),
                 title: $('#title').val(),
@@ -71,18 +74,20 @@
                         htmlContent += '<button class="collapsible">Document ID: ' + group.document_id + '</button>';
                         htmlContent += '<div class="content">';
                         // Display metadata
-                        if (firstResult.Metadata) {
+                        if (firstResult.Metadata) { 
+                                var timestamp = firstResult.Metadata.Updated;
+                                var date = new Date(timestamp);
                                 htmlContent += '<p><strong>Title: ' + (firstResult.Metadata.Title || 'N/A') + '</strong></p>';
-                                htmlContent += '<p><strong>Author: ' + (firstResult.Metadata.Author || 'N/A') + '</strong></p>';
-                                htmlContent += '<p><strong>Date: ' + (firstResult.Metadata.ModDate || 'N/A') + '</strong></p>';
+                                htmlContent += '<p><strong>Author: ' + (firstResult.Metadata.Authors || 'N/A') + '</strong></p>';
+                                htmlContent += '<p><strong>Updated: ' + date + '</strong></p>';
                             }
+                        
                         htmlContent += '<hr />';
                         group.results.forEach(function(doc) {
                             var customhighlightText = doc.Text.replace(regex, '<span class="custom-highlight">' + $('#searchQuery').val() + '</span>');
                             htmlContent += '<div class="result-item">';
                             htmlContent += '<strong>Page Number: ' + doc.Page_number + '</strong>';
                             htmlContent += '<p>' + customhighlightText + '</p>';
-                        
                             htmlContent += '<hr />';
                             htmlContent += '</div>';
                         });
@@ -90,6 +95,7 @@
                         htmlContent += '</div>';  // Close content div
                         htmlContent += '</div>';  // Close document group div
                     });
+                    
                     
                     $('#searchResults').html(htmlContent);
                     $('.collapsible').click(function() {
@@ -139,9 +145,17 @@
                 </select>
             </div>
         </div>
-
-
-        
+        <!-- Search depth Dropdown -->
+        <div class="row mb-3">
+            <label for="id_search_depth" class="col-sm-2 col-form-label">Search Depth</label>
+            <div class="col-sm-10">
+                <select id="searchDepth" id="id_search_depth" class="form-select">
+                    <option value="_chunk_level" selected>Chunk Level</option>
+                    <option value="_page_level">Page Level</option>
+                    <option value="_document_level">Document Level</option>
+                </select>
+            </div>
+        </div>
         <!-- Language Dropdown -->
         <div class="row mb-3">
             <label for="id_document_lang" class="col-sm-2 col-form-label">Document Language</label>

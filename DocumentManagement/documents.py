@@ -4,8 +4,6 @@ from DocumentProcessing.docx_processing.docx_processor import (
     extract_word_metadata
 )
 from DocumentProcessing.txt_processing.txt_processor import extract_text_from_txt
-
-from DocumentIndexing.Embedding.embedding import TextEmbedder
 from DocumentIndexing.Elastic.IndexSettingsGenerator import *
 from config import EMBEDDING_DINENSION
 from Utils.common_utils import detect_language, is_valid_arxiv_id, get_arxiv_metadata  

@@ -55,13 +55,13 @@ class SearchEngine:
             res = self.es.delete(index=index_name, id=document_id)
             return res
         
-    def vector_search(self, index_name, query_vector, language=None, mod_date_start=None, mod_date_end=None, additional_metadata=None, document_id=None, tags=None):
+    def vector_search(self, index_name, query_vector, vector_field = 'text_piece_vector',language=None, mod_date_start=None, mod_date_end=None, additional_metadata=None, document_id=None, tags=None):
         must_queries = [
             {
                 "script_score": {
                     "query": {"match_all": {}},
                     "script": {
-                        "source": "cosineSimilarity(params.query_vector, 'text_piece_vector') + 1.0",
+                        "source": f"cosineSimilarity(params.query_vector, '{vector_field}') + 1.0",
                         "params": {"query_vector": query_vector}
                     }
                 }
@@ -111,12 +111,12 @@ class SearchEngine:
 
 
 
-    def search_for_terms(self, index_name, word, exact_match=False, language=None, mod_date_start=None, mod_date_end=None, additional_metadata=None, document_id=None, tags=None):
+    def search_for_terms(self, index_name, word,query_field = 'text_piece', exact_match=False, language=None, mod_date_start=None, mod_date_end=None, additional_metadata=None, document_id=None, tags=None):
         if exact_match:
             must_queries = [
                 {
                     "match_phrase": {
-                        "text_piece": word
+                       query_field : word
                     }
                 }
             ]
@@ -124,8 +124,8 @@ class SearchEngine:
             must_queries = [
                 {
                     "match": {
-                        "text_piece": word
-                    }
+                        query_field : word
+                    } 
                 }
             ]
 

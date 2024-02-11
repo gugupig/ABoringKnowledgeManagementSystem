@@ -1,11 +1,10 @@
-
 # Create your views here.
 from django.shortcuts import render
 from .forms import DocumentForm
 import pickle
 from document_process_pipeline import DocumentProcessPipeline  # Import pipeline
 from DocumentIndexing.Elastic.search_engine import SearchEngine
-from DocumentIndexing.Embedding.embedding import TextEmbedder
+from DocumentIndexing.Embedding import embedding as embedder
 import sys
 sys.path.append('/root/gpt_projects/ABoringKnowledgeManagementSystem')
 from config import CROSS_DOCUMENT_SEARCH_CACHE_PATH
@@ -78,12 +77,42 @@ def file_selection_handler(request):
 
 
 def document_viewer(request):
-    return render(request, 'document_viewer.html')
+    document_dir = os.path.join(settings.MEDIA_ROOT)  # Adjust this path if needed
+    documents = os.listdir(document_dir)
+    document_urls = [os.path.join(settings.MEDIA_URL, doc) for doc in documents]
+    return render(request, 'document_viewer.html',{'documents': document_urls})
 
-from django.http import FileResponse
-from django.http import HttpResponseNotFound
 import os
+import json
+from django.conf import settings
+from django.shortcuts import render
 
+def document_viewer(request):
+    # Path to your JSON file (adjust as necessary)
+    json_file_path = '/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/document_list_cache/documents.json'
+
+    # Read and parse the JSON file
+    with open(json_file_path, 'r') as file:
+        categories = json.load(file)
+
+    # Convert paths to URLs
+    for category, documents in categories.items():
+        categories[category] = [(name, os.path.join(settings.MEDIA_URL, path)) for name, path in documents]
+
+    return render(request, 'document_viewer.html', {'categories': categories})
+from django.views.decorators.csrf import csrf_exempt
+import pickle
+@csrf_exempt  # Note: Better to handle CSRF properly in production
+def write_pdf_viewer_cache(request):
+    print('Writing to cache...')
+    if request.method == 'POST':
+        document_id = request.POST.get('document_id')
+        index_name = request.POST.get('category')
+        pickle.dump((document_id,index_name), open("/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/pdf_viewer_cache/pdf_viewer_cache.pkl", 'wb'))
+        return JsonResponse({"status": "success"})
+
+
+'''
 def serve_pdf(request):
     file_name = request.GET.get('file')
     base_path = '/root/gpt_projects/ABoringKnowledgeManagementSystem/DocumentBank/research_paper/'
@@ -98,6 +127,8 @@ def serve_pdf(request):
         
         print("File not found:", file_path)  # Log if the file is not found
         return HttpResponseNotFound('<h1>File not found</h1>')
+'''
+
 
 
 from django.http import JsonResponse
@@ -110,13 +141,13 @@ def list_pdf_files(request):
 
 
 def search_documents(request):
-    embedder = TextEmbedder()
     tag_form = DocumentForm()
     if request.method == 'POST':
         print('Performing search...')
         # Extract data from the POST request
         search_query = request.POST.get('searchQuery',None) if request.POST.get('searchQuery') != '' else None
-        document_type = request.POST.get('documentType')+"_chunk_level" #For now,only support chunk level search
+        search_depth = request.POST.get('searchDepth',None) if request.POST.get('searchDepth') != '' else '_chunk_level'
+        document_type = request.POST.get('documentType') + search_depth
         language = request.POST.get('language','en')
         author = request.POST.get('author',None) if request.POST.get('author') != '' else None
         title = request.POST.get('title',None) if request.POST.get('title') != '' else None
@@ -156,16 +187,15 @@ def search_documents(request):
                 return JsonResponse({'results': search_results, 'resultCount': result_count})
             else:
                 print('No results found')
-                search_results = [{'Page_number': 'No results found', 'Text': 'No results found', 'Metadata': 'No results found'}]
+                search_results = []
                 pickle.dump(search_results, open(CROSS_DOCUMENT_SEARCH_CACHE_PATH, 'wb'))
                 return JsonResponse({'results': search_results, 'resultCount': 0})
             #print(search_results) 
     # Return a JsonResponse or render a template with the search 
         else:
-            search_results = [{'Page_number': 'No results found', 'Text': 'No results found', 'Metadata': 'No results found'}]
+            search_results = []
             pickle.dump(search_results, open(CROSS_DOCUMENT_SEARCH_CACHE_PATH, 'wb'))
-            return JsonResponse({'results': search_results, 'resultCount': 0})
-       
+            return JsonResponse([])
     else:
         return render(request, 'document_search.html',{'form': tag_form})
 
@@ -184,3 +214,4 @@ def chat(request):
 
 def document_manager(request):
     return render(request, 'document_manager.html')
+

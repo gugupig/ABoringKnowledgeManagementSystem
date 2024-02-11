@@ -18,10 +18,12 @@ LOG_FILE_PATH_DOCUMENT_PROCESSING = '/root/gpt_projects/ABoringKnowledgeManageme
 CHAT_BOT_STATUT_CACHE_PATH = "/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/chat_bot_statut_cache/chat_bot_statut_cache.pkl"
 PDF_VIEWER_CACHE_PATH = "/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/pdf_viewer_cache/pdf_viewer_cache.pkl"
 CROSS_DOCUMENT_SEARCH_CACHE_PATH = "/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/cross_document_search_cache/cross_document_search_cache.pkl"
-
+DOCUMENT_FILE_LIST_CACHE_PATH = "/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/document_list_cache/documents.json"
 
 EMBEDDING_DINENSION = 1024
 TEXT_SPLIT_SIZE = 512
+QUERY_INSTRUCTIONS = {'retrieval' : 'Generate a representation for this query to use for retrieving related articles :'}
+
 LANGUAGE_CODE = ['en','fr','zh-cn','zh-tw']
 
 if __name__ == "__main__":
