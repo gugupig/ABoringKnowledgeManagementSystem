@@ -2,7 +2,6 @@
 
 from elasticsearch import Elasticsearch, helpers
 from config import EMBEDDING_DINENSION,ES_HOST,ES_HTTP_AUTH,ES_CA_CERTS_PATH
-import json
 
 
 class SearchEngine:
@@ -262,3 +261,16 @@ class SearchEngine:
 
 
 
+    def serach_by_id(self,index_name, document_id,result_size=10):
+        query = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {"term": {"document_id_universal": document_id}}
+                    ]
+                }
+            },
+            "size": result_size
+        }
+        response = self.es.search(index=index_name, body=query)
+        return response

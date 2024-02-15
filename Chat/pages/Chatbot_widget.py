@@ -135,7 +135,7 @@ with st.sidebar:
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 st.session_state.openai_model = model
-tab1, tab2 ,tab3,tab4 = st.tabs(["Chatbot","Notes","Knowleage Graph",'Toolbox'])
+tab1, tab2 ,tab3,tab4,tab5 = st.tabs(["Chatbot","Notes","Knowleage Graph",'Toolbox','TestGround'])
 spinner_text = 'Searching documents...' if rag_number!=0 else 'Thinking...'
 
 
@@ -361,7 +361,7 @@ def ask_gpt4(question, client):
     
     return response.choices[0].message.content
 
-
+from Chat import pre_build_tools
 with tab4:
     summary = ''
     context_text =''
@@ -386,28 +386,62 @@ with tab4:
     col1, col2 = st.columns([1,1])
     with col1:
         summarize = st.button('Summarize Document') 
-        bychunk = st.toggle("By Chunk", False)
+        sum_stradegy = st.selectbox('Summarize Stradegy',['Brute Force (EXPANSIVE!!!)','KNN Summarizer (WIP)'])
         with st.spinner('Working...'):
             if summarize:
-                if st.session_state.generated_text['summary'] == '':
-                    if st.session_state.document_text == '':
-                        if not bychunk:
+                if sum_stradegy == 'Brute Force (EXPANSIVE!!!)':
+                    if st.session_state.generated_text['summary'] == '':
+                        if st.session_state.document_text == '':
                             for page in st.session_state.document_text.values():
                                 context_text += page
-                        else:
-                            context_text = st.session_state.document_text
-                    summarize_prompt = summarize_prompt.format(text=st.session_state.document_text)
-                    messages = [
-                        {'role': "system", "content": """
-                        Summary : the summary of the text 
-                        Main Points : the main points of the text
-                        The summary should be formatted as follows:"""},
-                        {"role": "user", "content": summarize_prompt},
-                    ]
-                    summary = ask_gpt4(messages, client)
-                    st.session_state.generated_text['summary'] = summary
-                    update_document_in_mongodb(client = mongo_client,db_name='ABKMS',document_id = pdf_file_id ,collection_name='research_paper',update_data={'generated_text':st.session_state.generated_text})
+                elif sum_stradegy == 'KNN Summarizer (WIP)':
+                    context_text =  '\n'.join(pre_build_tools.cluster_search_engine(document_id=pdf_file_id))
+                summarize_prompt = summarize_prompt.format(text=context_text)
+                messages = [
+                    {'role': "system", "content": """
+                    The summary should be formatted as follows:
+                    ### Summary : the summary of the text 
+                    ### Main Points : the main points of the text
+                    """},
+                    {"role": "user", "content": summarize_prompt},
+                ]
+                summary = ask_gpt4(messages, client)
+                st.session_state.generated_text['summary'] = summary
+                update_document_in_mongodb(client = mongo_client,db_name='ABKMS',document_id = pdf_file_id ,collection_name='research_paper',update_data={'generated_text':st.session_state.generated_text})
+        if st.button('Delete Summary'):
+            st.session_state.generated_text['summary'] = ''
+            update_document_in_mongodb(client = mongo_client,db_name='ABKMS',document_id = pdf_file_id ,collection_name='research_paper',update_data={'generated_text':st.session_state.generated_text})
+            st.rerun()
     with col2:
         if st.session_state.generated_text['summary'] != '':
             st.markdown(st.session_state.generated_text['summary'])
         
+with tab5:
+    summarize_prompt_1 = """
+            You will be given some passages of a document. This passage will be enclosed in triple backticks (```)
+            Your goal is to give a concise summary of these passages so that a reader will have a full understanding of what happened in the document.
+            ```{text}```
+            """
+    summary = ''
+    col3, col4 = st.columns([1,1])
+    with col3:
+        summarize_1 = st.button('Summarize Document',key='summarize_1') 
+        k_nb = st.slider('Number of Cluster',min_value=10,max_value=30,value=10)
+        nb_per_cluster = st.slider('Number of passages per Cluster',min_value=1,max_value=5,value=1)
+        with st.spinner('Working...'):
+            if summarize_1:
+                context_text =  '\n'.join(pre_build_tools.cluster_search_engine(document_id=pdf_file_id,cluster_number = k_nb,nb_return_per_cluster = nb_per_cluster))
+                summarize_prompt_1 = summarize_prompt_1.format(text=context_text)
+                messages = [
+                    {'role': "system", "content": """
+                    The summary should be formatted as follows:
+                    ### Summary : the summary of the text 
+                    ### Main Points : the main points of the text
+                    """},
+                    {"role": "user", "content": summarize_prompt_1},
+                ]
+                summary = ask_gpt4(messages, client)
+    
+    with col4:
+        if summary != '':
+            st.markdown(summary)
