@@ -89,3 +89,25 @@ def get_arxiv_metadata(arxiv_id):
     else:
         return {}
 
+from pymongo import MongoClient
+import json
+from config import MONGODB_HOST, MONGODB_DB, DOCUMENT_FILE_LIST_CACHE_PATH
+
+def save_research_papers_to_json():
+    # Connect to MongoDB (Update 'your_connection_string' with your actual connection string)
+    client = MongoClient(MONGODB_HOST)
+    replace_string = '/root/gpt_projects/ABoringKnowledgeManagementSystem/DocumentBank'
+    # Select the database and collection
+    db = client[MONGODB_DB]# Replace 'your_database_name' with your actual database name
+    collection = db['research_paper']
+    
+    # Query the collection for the needed fields
+    papers = collection.find({}, {'document_title': 1, 'file_path': 1, 'upload_date': 1, '_id': 0}).sort('upload_date', -1)
+    
+    # Format the data into the specified dictionary format
+    research_papers_dict = {"research_paper": [(paper['document_title'], paper['file_path'].replace(replace_string,'/media')) for paper in papers]}
+    
+    print(research_papers_dict)
+    with open(DOCUMENT_FILE_LIST_CACHE_PATH, 'w') as f:
+        json.dump(research_papers_dict, f)
+    client.close()

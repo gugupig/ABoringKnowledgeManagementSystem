@@ -55,7 +55,15 @@ class SearchEngine:
             res = self.es.delete(index=index_name, id=document_id)
             return res
         
-    def vector_search(self, index_name, query_vector, vector_field = 'text_piece_vector',language=None, mod_date_start=None, mod_date_end=None, additional_metadata=None, document_id=None, tags=None):
+    def vector_search(self, index_name, query_vector, 
+                      vector_field = 'text_piece_vector',
+                      language=None, 
+                      mod_date_start=None, 
+                      mod_date_end=None, 
+                      additional_metadata=None, 
+                      document_id=None, 
+                      tags=None,
+                      projects=None):
         must_queries = [
             {
                 "script_score": {
@@ -82,6 +90,12 @@ class SearchEngine:
                 must_queries.append({"terms": {"Tags": tags}})
             else:
                 must_queries.append({"term": {"Tags": tags}})
+        
+        if projects:
+            if isinstance(projects, list):
+                must_queries.append({"terms": {"Projects": projects}})
+            else:
+                must_queries.append({"term": {"Projects": projects}})
 
         # Constructing the query
         query = {
@@ -111,7 +125,15 @@ class SearchEngine:
 
 
 
-    def search_for_terms(self, index_name, word,query_field = 'text_piece', exact_match=False, language=None, mod_date_start=None, mod_date_end=None, additional_metadata=None, document_id=None, tags=None):
+    def search_for_terms(self, index_name, word,query_field = 'text_piece', 
+                         exact_match=False, 
+                         language=None, 
+                         mod_date_start=None, 
+                         mod_date_end=None, 
+                         additional_metadata=None, 
+                         document_id=None, 
+                         tags=None,
+                         projects=None):
         if exact_match:
             must_queries = [
                 {
@@ -140,9 +162,15 @@ class SearchEngine:
         # Filter by tags
         if tags:
             if isinstance(tags, list): # If multiple tags
-                must_queries.append({"terms": {"Tags": tags}})
+                must_queries.append({"terms": {"document_tags": tags}})
             else:
-                must_queries.append({"term": {"Tags": tags}})
+                must_queries.append({"term": {"document_tags": tags}})
+
+        if projects:
+            if isinstance(projects, list):
+                must_queries.append({"terms": {"document_project": projects}})
+            else:
+                must_queries.append({"term": {"document_project": projects}})
 
         # Constructing the query
         query = {

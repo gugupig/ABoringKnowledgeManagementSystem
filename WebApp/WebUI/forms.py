@@ -4,6 +4,7 @@ DOCUMENT_TYPE_CHOICES = [
     ('research_paper', 'Research Paper'),
     ('research_bookk', 'Research Book'),
     ('personal_document', 'Personal Document'),
+    ('notes', 'Notes'),
     ('others', 'Others'),
 ]
 DOCUMENT_TAG_CHOICES = [

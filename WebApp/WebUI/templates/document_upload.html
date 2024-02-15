@@ -13,21 +13,31 @@
                 height: 120px;
                 animation: spin 2s linear infinite;
             }
-            
             @keyframes spin {
                 0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            
+                100% { transform: rotate(360deg); } }
+            .tagify+input{
+                display: block !important;
+                position: static !important;
+                transform: none !important;
+                width: 90%;
+                margin-top: 1em;
+                padding: .5em;
+                }
             </style>
+            <!--Tagify -->
+            <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.polyfills.min.js"></script>
+            <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css" />
     </head>
     <body>
+
         <div class="card">
             <div class="card-body">
               <h5 class="card-title">Upload document here</h5>
-              <form method="post" enctype="multipart/form-data">
+              <form method="post" enctype="multipart/form-data" id = "uploadForm" method="POST" action = "{% url 'document_upload' %}">
                 {% csrf_token %}
-                <div class="row mb-3">
+                <div class="row mb-3"> 
                     <label for="id_document_type" class="col-sm-2 col-form-label">Document Type</label>
                     <div class="col-sm-10">
                         <select name="document_type" id="id_document_type" class="form-select">
@@ -46,11 +56,15 @@
                 <div class="row mb-3">
                     <label for="id_document_tags" class="col-sm-2 col-form-label">Document Tags</label>
                     <div class="col-sm-10">
-                        <select name="document_tags" id="id_document_tags" class="form-select" multiple>
-                            {% for value, label in form.fields.tags.choices %}
-                                <option value="{{ value }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
+                        <script>
+                            var input = document.querySelector('input[name=tags]'),
+                                tagify1;
+                            var tagOptions = {{ tag_options|safe }};
+                            tagify1 = new Tagify(input, {
+                                whitelist: tagOptions
+                            });
+                        </script>
+                        <input type = text class = "form-control" name='tags' placeholder='Enter tags'>
                     </div>
                 </div>
                 <div class="accordion accordion-flush" id="accordionFlushExample">
@@ -92,11 +106,42 @@
                                 <input type="date" id="date" placeholder="Date" class="form-control">
                             </div>
                         </div>
-                </div>
-                </div>
-                </div>
-                </div>
-                <!-- Add any other form fields here -->
+        
+                        </div>
+                        </div>
+                        </div>  
+                      
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="flush-headingTwo">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseTwo" aria-expanded="false" aria-controls="flush-collapseTwo">
+                            Add to Projects
+                        </button>
+                      </h2>
+                      <div id="flush-collapseTwo" class="accordion-collapse collapse" aria-labelledby="flush-headingTwo" data-bs-parent="#accordionFlushExample">
+                        <div class="accordion-body">
+                        <div class="row mb-3">
+                            <label for="id_document_meta" class="col-sm-2 col-form-label">Projects</label>
+                            <div class="col-sm-10">
+                                <script>
+                                    var input = document.querySelector('input[name=projects]');
+                                    var projectOptions = {{ project_options|safe }};
+                                        tagify1 = new Tagify(input, {
+                                                whitelist : projectOptions
+                                        });
+                                </script>
+                                <input type = text class = "form-control" name='projects' placeholder='Enter project name'>
+                            </div>
+                        </div>
+        
+                        </div>
+                        </div>
+                        </div>   
+
+                                
+                        </div>
+                <!--End of modify metadata-->
+  
+
                 <div class="row mb-3">
                     <div class="col-sm-10 offset-sm-2">
                         <button type="submit" class="btn btn-primary">Upload</button>
@@ -112,48 +157,64 @@
                     <div id="uploadStatus"></div> <!-- For displaying status messages -->
 
                     <script>
-                        document.addEventListener("DOMContentLoaded", function() {
-                            var uploadForm = document.getElementById('uploadForm'); // The form
-                            uploadForm.addEventListener('submit', function(e) {
-                                e.preventDefault(); // Stop the form from submitting normally
+                        $(document).ready(function() {
+                            // Using delegated event handling to capture form submission
+                            $(document).on('submit', '#uploadForm', function(e) {
+                                e.preventDefault(); // Prevent the default form submission
+                                console.log('Form submitted');
 
-                                // Show the upload message and progress bar
-                                document.getElementById('uploadMessage').style.display = 'block';
-                                document.getElementById('spinner').style.display = 'block';
+                                // Show the upload message and spinner
+                                $('#uploadMessage').show();
+                                $('#spinner').show();
 
-                                var formData = new FormData(uploadForm);
-                                var xhr = new XMLHttpRequest();
-                                xhr.open('POST', uploadForm.getAttribute('action'), true);
-
-                                // CSRF token handling (assuming Django template)
-                                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-                                xhr.setRequestHeader('X-CSRFToken', csrfToken);
-
-                                xhr.onload = function() {
-                                    // Hide the upload message and progress bar
-                                    document.getElementById('uploadMessage').style.display = 'none';
-                                    document.getElementById('spinner').style.display = 'none';
-
-                                    if (xhr.status === 200) {
-                                        try {
-                                            var response = JSON.parse(xhr.responseText);
-                                            document.getElementById('uploadStatus').innerHTML = response.message;
-                                        } catch (e) {
-                                            document.getElementById('uploadStatus').innerHTML = 'Received non-JSON response';
+                                var formData = new FormData(this); // 'this' refers to the form element
+                                var actionUrl = $(this).attr('action'); // The form's action URL
+                                for(let pair of formData.entries()) {
+                                        console.log(pair[0]+ ', '+ pair[1]); 
                                         }
-                                    } else {
+                                console.log('Action URL:', actionUrl);
+                                // Initialize a new AJAX request
+                                $.ajax({
+                                    type: 'POST',
+                                    url: actionUrl,
+                                    data: formData,
+                                    processData: false, // Prevent jQuery from transforming the data into a query string
+                                    contentType: false, // Don't set contentType; let the browser do it
+                                    headers: {
+                                        'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val() // CSRF token
+                                    },
+                                    success: function(response) {
+                                        // Hide the upload message and spinner
+                                        $('#uploadMessage').hide();
+                                        $('#spinner').hide();
+
+                                        // Process the response
+                                        try {
+                                            var jsonResponse = JSON.parse(response);
+                                            $('#uploadStatus').html(jsonResponse.message);
+                                        } catch (e) {
+                                            $('#uploadStatus').html('Received non-JSON response');
+                                        }
+                                    },
+                                    error: function(xhr) {
+                                        $('#uploadMessage').hide();
+                                        $('#spinner').hide();
+
+                                        // Error handling
                                         try {
                                             var errorResponse = JSON.parse(xhr.responseText);
-                                            document.getElementById('uploadStatus').innerHTML = errorResponse.message;
+                                            $('#uploadStatus').html(errorResponse.message);
                                         } catch (e) {
-                                            document.getElementById('uploadStatus').innerHTML = 'Error during file upload';
+                                            $('#uploadStatus').html('Error during file upload');
                                         }
                                     }
-                                };
-                                xhr.send(formData);
+                                });
                             });
-                        });
-                    </script>       
+                            });
+
+                    </script> 
+                    
+
         </div>
     </div>  
     </body>

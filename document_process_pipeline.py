@@ -9,7 +9,7 @@ from DocumentManagement.documents import Document
 from DocumentManagement.file_manager import File_Manager     
 from pymongo.errors import DuplicateKeyError   
 from config import ES_HOST, MONGODB_HOST, MONGODB_DB, DOCUMENTBANK_ROOT,EMBEDDING_DINENSION
-from Utils import common_utils
+from Utils.common_utils import save_research_papers_to_json
 from datetime import datetime
 import time
 
@@ -17,7 +17,6 @@ class DocumentProcessPipeline:
     def __init__(self):
         self.search_engine = search_engine.SearchEngine()
         self.document_store = documentstore
-        self.common_utils = common_utils
         self.document_bank_location = {
             'Research Paper': f'{DOCUMENTBANK_ROOT}/ResearchPaper',
             'Research Book': f'{DOCUMENTBANK_ROOT}/ResearchBook',
@@ -96,6 +95,7 @@ class DocumentProcessPipeline:
             'upload_date': int(datetime.now().timestamp() * 1000),
             'language': document.language,
             'document_tags': document.tags,
+            'document_project': document.project,
             'metadata': document.metadata if document.file_type in ['pdf', 'docx'] else {},
             'acheived': False,
 
@@ -159,7 +159,7 @@ class DocumentProcessPipeline:
 
 
 
-    def document_pipeline(self, file, document_type,metadata = None,tags = None):
+    def document_pipeline(self, file, document_type,metadata = None,tags = None,projects = None):
         # Generate unique document ID at the beginning
         document_id = self.common_utils.generate_document_id()
 
@@ -180,7 +180,7 @@ class DocumentProcessPipeline:
             print("Document extraction failed.")
             return False
 
-        #Addition step: update metadata and tags
+        #Addition step: update metadata,tags and projects
         if metadata and new_document.file_type == 'pdf':
             new_document.metadata['Title'] = metadata.get('title', new_document.metadata['Title'])
             new_document.metadata['Authors'] = metadata.get('author', new_document.metadata['Authors'])
@@ -189,6 +189,8 @@ class DocumentProcessPipeline:
             new_document.metadata['Categories'] = metadata.get('categories', new_document.metadata['Categories'])
         if tags:
             new_document.tags = tags
+        if projects:
+            new_document.project = projects
 
 
         # Step 3: Upload document to MongoDB
@@ -197,7 +199,8 @@ class DocumentProcessPipeline:
             print("Uploading document to MongoDB failed.")
             # No rollback needed here as it's the first database operation
             return False
-
+        # Step 3.5: Save research papers to json list cache
+        save_research_papers_to_json()
         # Step 4: sub_pipeline depending on document size
         #if new_document.total_page_number > 100:
             #sub_pipeline_status = self.sub_pipeline_bulk(new_document)

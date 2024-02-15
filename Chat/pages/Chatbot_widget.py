@@ -6,6 +6,13 @@ import os
 import pickle
 from rag import one_document_prompt,search_one_document,two_step_retrival_page,two_step_prompt_page
 from streamlit_extras.stylable_container import stylable_container
+from DocumentIndexing.MongoDB.documentstore import get_document_from_mongodb, delete_document_from_mongodb,upload_document_to_mongodb,update_document_in_mongodb,get_document_field_from_mongodb
+from DocumentManagement.documents import NOTEDocument
+from config import MONGODB_HOST
+from pymongo import MongoClient
+import uuid
+from datetime import datetime
+
 
 
 CHAT_BOT_STATUT_CACHE_PATH = "/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/chat_bot_statut_cache/chat_bot_statut_cache.pkl"
@@ -25,29 +32,76 @@ corss_document_search_results = pickle.load(open(CROSS_DOCUMENT_SEARCH_CACHE_PAT
 
 st.set_page_config(page_title='Chatbot-widget', page_icon=':star', layout='wide')
 
+def reset_all():
+    st.session_state.messages = []
+    st.session_state.user_input = ''
+    st.session_state.assistant_response = ''
+    st.session_state.context = ''
+    st.session_state.retrieved_page_nb = ''
+    st.session_state.last_user_input = ''
+    st.session_state.last_assistant_response = ''
+    pulled_notes = get_document_from_mongodb(client=mongo_client,db_name='ABKMS',collection_name='notes',query_field='attached_documents',query_terms=pdf_file_id)
+    st.session_state.notes = {
+        note['_id']:{'Title': note['note_title'],'Content':note['text'],'Date':note['upload_date'].strftime("%d/%m/%Y")} for note in pulled_notes
+        }
+    st.rerun()  # Rerun the app to reflect
+
+def escape_markdown(text):
+    text.replace('\n','')
+    return text
+
+
+@st.cache_resource
+def mongodb_client():
+    return MongoClient(MONGODB_HOST)
+
+mongo_client = mongodb_client()
+
+if "messages" not in st.session_state:
+    chat_history = get_document_field_from_mongodb(client = mongo_client,db_name='ABKMS',collection_name='research_paper',query_field='_id',query_terms=pdf_file_id,return_field='chat_history')
+    if chat_history:
+        st.session_state.messages = chat_history
+    else:
+        st.session_state.messages = []
+if 'retrieved_page_nb' not in st.session_state:
+    st.session_state.retrieved_page_nb = ''
+if 'context' not in st.session_state:
+    st.session_state.context = ''
+if 'last_user_input' not in st.session_state:
+    st.session_state.last_user_input = ''
+if 'last_assistant_response' not in st.session_state:    
+    st.session_state.last_assistant_response = ''
+if 'notes' not in st.session_state:
+    pulled_notes = get_document_from_mongodb(client=mongo_client,db_name='ABKMS',collection_name='notes',query_field='attached_documents',query_terms=pdf_file_id)
+    st.session_state.notes = {
+        note['_id']:{'Title': note['note_title'],'Content':note['text'],'Date':note['upload_date'].strftime("%d/%m/%Y")} for note in pulled_notes
+        }
 
 
 with st.sidebar:
     st.markdown(f""" 
-                <strong> Chatbot is in </strong>  <span style="color: red; font-weight: bold;"> {chat_bot_statut} mode </span>
+                <strong> Chatbot is in </strong>  <span style="color: blue; font-weight: bold;"> {chat_bot_statut} mode </span>
                 <br> 
                 <strong> Current document is </strong> <br>
-                <span style="color: red; font-weight: bold;"> {pdf_file_id}</span>
+                <span style="color: blue; font-weight: bold;"> {pdf_file_id}</span>
                 """,
                 unsafe_allow_html=True)
 
     if st.button('Reset Session'):
-        st.session_state.messages = []  # Clear the chat history
-        st.session_state.user_input = ''
-        st.session_state.assistant_response = ''
-        st.session_state.context = ''
-        st.session_state.retrieved_page_nb = ''
-        st.session_state.last_user_input = ''
-        st.session_state.last_assistant_response = ''
-        st.rerun()  # Rerun the app to reflect
+        reset_all()
+    if st.button('Clear Chat History'):
+        st.markdown("""
+                    <span style="color: red; font-weight: bold;">THIS WILL CLEAR ALL CHAT HISTORY RELATED TO THIS DOCUMENT IN THE DATABASE !!!<br>
+                    ARE YOU SURE ?</span>
+                    """,unsafe_allow_html=True)
+        if st.button('YES',key = 'yes'):
+            st.session_state.messages = []
+            update_document_in_mongodb(client = mongo_client,db_name='ABKMS',document_id=pdf_file_id,collection_name='research_paper',update_data={'chat_history':st.session_state.messages})
+        elif st.button('NO',key = 'no'):
+            pass
     model = st.selectbox(
         'Model',
-        ['gpt-3.5-turbo', 'gpt-4-1106-preview'])
+        ['gpt-3.5-turbo-0125', 'gpt-4-turbo-preview'])
     rag_number = st.slider(
     'Number of Context Texts Used',  # Title of the slider
     min_value=0,                     # Minimum value
@@ -79,6 +133,12 @@ with st.sidebar:
         subject = st.text_input('Subject',placeholder= 'Enter the subject of the document') 
 
 
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+st.session_state.openai_model = model
+tab1, tab2 ,tab3,tab4 = st.tabs(["Chatbot","Notes","Knowleage Graph",'Toolbox'])
+spinner_text = 'Searching documents...' if rag_number!=0 else 'Thinking...'
+
+
 system_message = {'role':"system","content":"""
                     You are a chatbot to help users to search documents, summarize documents, and answer questions about documents.
                     Be precise and do not hallucinate."""}
@@ -96,25 +156,9 @@ elif chat_bot_statut == 'Cross Document Search' and rag_number!=0:
                     when your knowledge is conflicting with the context text pieces, use the context text pieces to answer the question."""}
         
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-st.session_state.setdefault("openai_model", model)
-tab1, tab2 ,tab3 = st.tabs(["Chatbot","Notes","Knowleage Graph"])
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if 'retrieved_page_nb' not in st.session_state:
-    st.session_state.retrieved_page_nb = ''
-if 'context' not in st.session_state:
-    st.session_state.context = ''
-if 'last_user_input' not in st.session_state:
-    st.session_state.last_user_input = ''
-if 'last_assistant_response' not in st.session_state:    
-    st.session_state.last_assistant_response = ''
 
-        
-spinner_text = 'Searching documents...' if rag_number!=0 else 'Thinking...'
 
-  
 with tab1:
     context = None  # Initialize with None to handle the case where no context is retrieved 
     retrieved_page_nb = None  # Initialize with None to handle the case where no pages are retrieved
@@ -180,6 +224,7 @@ with tab1:
                 if retrieved_page_nb:
                     full_response += f"\n\nRetrieved pages: {', '.join(map(str, retrieved_page_nb)) if retrieved_page_nb else 'No result found.'}"
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
+                update_document_in_mongodb(client = mongo_client,db_name='ABKMS',document_id=pdf_file_id,collection_name='research_paper',update_data={'chat_history':st.session_state.messages})
                 
             
     with stylable_container(
@@ -206,7 +251,9 @@ with tab1:
                     st.markdown(message["content"])
                     if st.session_state.context !=None and i == len(st.session_state.messages)-1:
                         expander = st.expander(f"Retrieved Context at page {st.session_state.retrieved_page_nb}")
-                        expander.write(f'{st.session_state.context}')
+                        for text in st.session_state.context.split('\n'):
+                            expander.write(text)
+                        #expander.write(f'{st.session_state.context}')
 
 
 from SL_ReactFlow import SL_ReactFlow
@@ -221,8 +268,17 @@ with tab3:
         st.session_state['lastButtonClick'] = None
 
     if 'canvas' not in st.session_state:
-        st.session_state['canvas'] = {'nodes': [], 'edges':[]}
-    
+       pulled_graphs =  get_document_from_mongodb(client=mongo_client,db_name='ABKMS',collection_name='graph',query_field='_id',query_terms=pdf_file_id)
+       pulled_graphs = next(pulled_graphs,None)
+       if pulled_graphs:
+            st.session_state['canvas'] = {
+                'nodes': pulled_graphs['nodes'] if pulled_graphs else [],
+                'edges': pulled_graphs['edges'] if pulled_graphs else []
+        }
+       else: 
+            st.session_state['canvas'] = {'nodes': [], 'edges':[]}
+           
+
     canvas_container = st.container()
     form_container = st.container()
     
@@ -258,14 +314,100 @@ with tab3:
                         label=label, 
                         numClicks=st.session_state.get('numClicks', 0), 
                         lastClickButton=st.session_state.get('lastButtonClick', None),
-                        canvas = st.session_state.get('canvas', {'nodes': [], 'edges':[]}),
+                        canvas = st.session_state.get('canvas'),
                         key="graph_component",
                         )
 
-        #st.write(canvas)
         pickle.dump(canvas, open('canvas.pkl', 'wb'))
 
+note_cache_path = '/root/gpt_projects/ABoringKnowledgeManagementSystem/Chat/notes.pkl'
 with tab2:
-    st.write('Notes')
-print(st.session_state.context)
-print(st.session_state.retrieved_page_nb)
+    with stylable_container(
+    key="bottom_content",
+    css_styles="""
+        {
+            position: fixed;
+            bottom: 30px;
+            z-index: 1;
+            max-width: 100vw;
+        }
+        """,
+        ):
+        note = st.chat_input("?",key="note")
+        if note:
+            note_id = str(uuid.uuid4())
+            note_title = f"Note {len(st.session_state.notes)+1}"
+            new_note = NOTEDocument(document_id = note_id,attached_documents_ids=pdf_file_id,
+                                    document_type='notes',note_title=note_title,
+                                    note_text=note,
+                                    note_type='pdf_note')
+            upload_document_to_mongodb(new_note,client=mongo_client,db_name='ABKMS',collection_name='notes')
+            st.session_state.notes[note_id] = {'Title': note_title,'Content':note,'Date':datetime.now().strftime("%d/%m/%Y")}
+    for note in list(st.session_state.notes.items()):
+        with st.expander(note[1]['Date']):
+            st.markdown(f'<strong>Content:</strong>',unsafe_allow_html=True)
+            st.markdown(f'''{note[1]['Content']}''')
+            if st.button('Delete Note',key=note[0]):
+                delete_document_from_mongodb(client=mongo_client,db_name='ABKMS',collection_name='notes',document_id=note[0])
+                st.session_state.notes.pop(note[0])
+                st.rerun()
+                
+
+def ask_gpt4(question, client):
+    response = client.chat.completions.create(
+        model=st.session_state["openai_model"],
+        messages=question,
+    )
+    
+    return response.choices[0].message.content
+
+
+with tab4:
+    summary = ''
+    context_text =''
+    summarize_prompt = """Write a concise summary of the following:
+                        "{text}"            
+                        """
+    
+    if 'document_text' not in st.session_state:
+        document_text = get_document_field_from_mongodb(client = mongo_client,db_name='ABKMS',collection_name='research_paper',query_field='_id',query_terms=pdf_file_id,return_field='text')
+        if document_text:
+            st.session_state.document_text = document_text
+        else:
+            st.session_state.document_text = {}
+    if 'generated_text' not in st.session_state:
+        generated = get_document_field_from_mongodb(client = mongo_client,db_name='ABKMS',collection_name='research_paper',query_field='_id',query_terms=pdf_file_id,return_field='generated_text')
+        if generated:
+            st.session_state.generated_text = generated
+        else:
+            st.session_state.generated_text = {'summary': ''}
+
+    st.write(st.session_state['openai_model'])
+    col1, col2 = st.columns([1,1])
+    with col1:
+        summarize = st.button('Summarize Document') 
+        bychunk = st.toggle("By Chunk", False)
+        with st.spinner('Working...'):
+            if summarize:
+                if st.session_state.generated_text['summary'] == '':
+                    if st.session_state.document_text == '':
+                        if not bychunk:
+                            for page in st.session_state.document_text.values():
+                                context_text += page
+                        else:
+                            context_text = st.session_state.document_text
+                    summarize_prompt = summarize_prompt.format(text=st.session_state.document_text)
+                    messages = [
+                        {'role': "system", "content": """
+                        Summary : the summary of the text 
+                        Main Points : the main points of the text
+                        The summary should be formatted as follows:"""},
+                        {"role": "user", "content": summarize_prompt},
+                    ]
+                    summary = ask_gpt4(messages, client)
+                    st.session_state.generated_text['summary'] = summary
+                    update_document_in_mongodb(client = mongo_client,db_name='ABKMS',document_id = pdf_file_id ,collection_name='research_paper',update_data={'generated_text':st.session_state.generated_text})
+    with col2:
+        if st.session_state.generated_text['summary'] != '':
+            st.markdown(st.session_state.generated_text['summary'])
+        

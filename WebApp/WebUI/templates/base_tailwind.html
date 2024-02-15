@@ -16,7 +16,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.gstatic.com" rel="preconnect">
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
-
+  
     <!-- Vendor CSS Files -->
   <link href="{% static 'assets/vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
   <link href="{% static 'assets/vendor/bootstrap-icons/bootstrap-icons.css' %}" rel="stylesheet">
@@ -30,6 +30,15 @@
 
  <!--jquery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+<!--Tagify -->
+<script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+<script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.polyfills.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css" />
+
+
+
+
 <style>
   iframe {
   width: 100%;
@@ -99,6 +108,11 @@
 .red {
   cursor: pointer;
   background-color: red;
+}
+
+.blue {
+  cursor : pointer;
+  background-color: blue;
 }
 
 </style>
@@ -327,7 +341,7 @@
   <div id="chatbotWindow" width="50vw" height="50vh" class="window" style="display: none;">
 
     <div class="window-top"  class="window">
-        <button class="round green"></button><button class="round yellow"></button><button class="round red"></button>
+      <button class="round blue"></button><button class="round green"></button><button class="round yellow"></button><button class="round red"></button>
     </div>
     <div class="window-content">
         <iframe src="http://194.163.147.140:8501/Chatbot_widget" width="100%" frameborder= "0" class="chatIframe"></iframe>
@@ -393,8 +407,7 @@
         success: function(data) {
           $('#main').html(data); // Update the main content area with the response
 
-          // Clear the specific const variable "sidebar_1"
-          eval('const sidebar_1 = undefined;');
+
         },
         error: function() {
           console.log('Error loading content');
@@ -407,56 +420,106 @@
 
   <!-- make Chatbot Window draggable -->
   <script>
-              function makeDraggable (element) {
-            // Make an element draggable (or if it has a .window-top class, drag based on the .window-top element)
-            let currentPosX = 0, currentPosY = 0, previousPosX = 0, previousPosY = 0;
-            
-              // If there is a window-top classed element, attach to that element instead of full window
-            if (element.querySelector('.window-top')) {
-              // If present, the window-top element is where you move the parent element from
-              element.querySelector('.window-top').onmousedown = dragMouseDown;
-            } 
-            else {
-              // Otherwise, move the element itself
-              element.onmousedown = dragMouseDown;
+            function makeDraggable(element) {
+              let currentPosX = 0, currentPosY = 0, previousPosX = 0, previousPosY = 0;
+              
+              const dragElement = element.querySelector('.window-top') || element;
+
+              dragElement.addEventListener('mousedown', dragMouseDown);
+              dragElement.addEventListener('touchstart', dragMouseDown); // Add touch support
+
+              function dragMouseDown(e) {
+                e.preventDefault(); // Prevent default action
+                
+                if (e.type === 'touchstart') {
+                  previousPosX = e.touches[0].clientX;
+                  previousPosY = e.touches[0].clientY;
+                } else { // For mousedown
+                  previousPosX = e.clientX;
+                  previousPosY = e.clientY;
+                }
+                
+                document.addEventListener('mouseup', closeDragElement);
+                document.addEventListener('touchend', closeDragElement); // Add touch support
+                
+                document.addEventListener('mousemove', elementDrag);
+                document.addEventListener('touchmove', elementDrag); // Add touch support
+              }
+
+              function elementDrag(e) {
+                e.preventDefault(); // Prevent default action
+                
+                if (e.type === 'touchmove') {
+                  currentPosX = previousPosX - e.touches[0].clientX;
+                  currentPosY = previousPosY - e.touches[0].clientY;
+                  previousPosX = e.touches[0].clientX;
+                  previousPosY = e.touches[0].clientY;
+                } else { // For mousemove
+                  currentPosX = previousPosX - e.clientX;
+                  currentPosY = previousPosY - e.clientY;
+                  previousPosX = e.clientX;
+                  previousPosY = e.clientY;
+                }
+                
+                // Set the element's new position
+                element.style.top = (element.offsetTop - currentPosY) + 'px';
+                element.style.left = (element.offsetLeft - currentPosX) + 'px';
+              }
+
+              function closeDragElement() {
+                // Stop moving when mouse button is released or touch ends
+                document.removeEventListener('mouseup', closeDragElement);
+                document.removeEventListener('mousemove', elementDrag);
+                document.removeEventListener('touchend', closeDragElement); // Remove touch support
+                document.removeEventListener('touchmove', elementDrag); // Remove touch support
+              }
             }
             
-            function dragMouseDown (e) {
-              // Prevent any default action on this element (you can remove if you need this element to perform its default action)
-              e.preventDefault();
-              // Get the mouse cursor position and set the initial previous positions to begin
-              previousPosX = e.clientX;
-              previousPosY = e.clientY;
-              // When the mouse is let go, call the closing event
-              document.onmouseup = closeDragElement;
-              // call a function whenever the cursor moves
-              document.onmousemove = elementDrag;
-            }
             
-            function elementDrag (e) {
-              // Prevent any default action on this element (you can remove if you need this element to perform its default action)
-              e.preventDefault();
-              // Calculate the new cursor position by using the previous x and y positions of the mouse
-              currentPosX = previousPosX - e.clientX;
-              currentPosY = previousPosY - e.clientY;
-              // Replace the previous positions with the new x and y positions of the mouse
-              previousPosX = e.clientX;
-              previousPosY = e.clientY;
-              // Set the element's new position
-              element.style.top = (element.offsetTop - currentPosY) + 'px';
-              element.style.left = (element.offsetLeft - currentPosX) + 'px';
-            }
             
-            function closeDragElement () {
-              // Stop moving when mouse button is released and release events
-              document.onmouseup = null;
-              document.onmousemove = null;
-            }
-            }
             
             makeDraggable(document.querySelector('#chatbotWindow'));
-            
-  </script>
+
+            function isTouchDevice() {
+              return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+  }
+
+            document.addEventListener(isTouchDevice() ? 'touchend' : 'click', e => {
+                // Since touchend events don't have a closest method, we need to manually check if the target or any of its parents have the class
+                let target = e.target;
+                while (target != null) {
+                    if (target.classList && target.classList.contains('round')) {
+                        // Found a target with the 'round' class, check for specific buttons
+                        if (target.classList.contains('red')) {
+                            $('#chatbotWindow').toggle();
+                        } else if (target.classList.contains('yellow')) {
+                            const chatWindow = document.getElementById('chatbotWindow');
+                            chatWindow.style.width = '90vw';
+                            chatWindow.style.height = '90vh';
+                            chatWindow.style.display = 'block';
+                        } else if (target.classList.contains('green')) {
+                            const chatWindow = document.getElementById('chatbotWindow');
+                            chatWindow.style.width = '50vw';
+                            chatWindow.style.height = '50vh';
+                            chatWindow.style.display = 'block';
+                        } else if (target.classList.contains('blue')) {
+                            const chatWindow = document.getElementById('chatbotWindow');
+                            if (!isTranslucent) {
+                                chatWindow.style.opacity = '0.6';
+                                isTranslucent = true;
+                            } else {
+                                chatWindow.style.opacity = '1';
+                                isTranslucent = false;
+                            }
+                        }
+                        // Prevent handling the same touch as a drag
+                        e.preventDefault();
+                        break;
+                    }
+                    target = target.parentNode;
+                }
+            }, {passive: false}); 
+</script>
 
   <!-- Chatbot window toggle -->
   <script>

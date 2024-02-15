@@ -15,7 +15,10 @@
         }
 
     </style> 
-    
+    <!--Tagify -->
+    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.polyfills.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
     <script>
@@ -51,7 +54,9 @@
                 subject: $('#subject').val(),
                 date: $('#date').val(),
                 exactMatch: $('#exactMatch').is(':checked'),
-                semanticSearch: $('#semanticSearch').is(':checked')
+                semanticSearch: $('#semanticSearch').is(':checked'),
+                tags:$('#tags').val(),
+                projects:$('#projects').val()
             };
             regex = new RegExp($('#searchQuery').val(), 'gi'); // 'gi' for global and case-insensitive
             // Send an AJAX request
@@ -152,7 +157,7 @@
                 <select id="searchDepth" id="id_search_depth" class="form-select">
                     <option value="_chunk_level" selected>Chunk Level</option>
                     <option value="_page_level">Page Level</option>
-                    <option value="_document_level">Document Level</option>
+                    <option value="_document_level">Document Level (WIP)</option>
                 </select>
             </div>
         </div>
@@ -202,23 +207,17 @@
                         </div>
                     </div>
                     <div class="row mb-3">
-                    <label for="id_document_meta" class="col-sm-2 col-form-label">Author(WIP)</label>
+                    <label for="id_document_meta" class="col-sm-2 col-form-label">Authors</label>
                     <div class="col-sm-10">
                         <input type="text" id="author" placeholder="Author" class="form-control">
                     </div>
                 </div>
                 <div class="row mb-3">
-                    <label for="id_document_meta" class="col-sm-2 col-form-label">Subject (WIP)</label>
+                    <label for="id_document_meta" class="col-sm-2 col-form-label"> Categories (WIP) </label>
                     <div class="col-sm-10">
-                        <input type="text" id="subject" placeholder="Subject" class="form-control">
+                        <input type="text" id="Categories" placeholder="Categories" class="form-control">
                     </div>
                 </div>
-                <div class="row mb-3">
-                    <label for="id_document_meta" class="col-sm-2 col-form-label">keywords (WIP)</label>
-                    <div class="col-sm-10">
-                        <input type="text" id="keywords" placeholder="Enter Kerywords divided by ," class="form-control">
-                    </div>
-                </div>  
                 <div class="row mb-3">
                     <label for="id_document_meta" class="col-sm-2 col-form-label">Date (WIP)</label>
                     <div class="col-sm-10">
@@ -226,14 +225,30 @@
                     </div>
                 </div>
                 <div class="row mb-3">
-                    <label class="col-sm-2 col-form-label">Document Tags (WIP)</label>
+                    <label class="col-sm-2 col-form-label">Document Tags</label>
                     <div class="col-sm-10">
-                        <select name="document_tags" id="id_document_tags" class="form-select" multiple>
-                            {% for value, label in form.fields.tags.choices %}
-                                <option value="{{ value }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-            
+                        <script>
+                            var input = document.querySelector('input[name=tags]'),
+                                tagify1;
+                            var tagOptions = {{ tag_options|safe }};
+                            tagify1 = new Tagify(input, {
+                                whitelist: tagOptions
+                            });
+                        </script>
+                        <input type = text id = 'tags' class = "form-control" name='tags' placeholder='Enter tags'>
+                    </div>
+                  </div>
+                  <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Projects Belong to </label>
+                    <div class="col-sm-10">
+                        <script>
+                            var input = document.querySelector('input[name=projects]');
+                            var projectOptions = {{ project_options|safe }};
+                                tagify1 = new Tagify(input, {
+                                        whitelist : projectOptions
+                                });
+                        </script>
+                        <input type = text id = 'projects' class = "form-control" name='projects' placeholder='Enter project name'>
                     </div>
                   </div>
         </div>

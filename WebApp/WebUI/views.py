@@ -17,52 +17,51 @@ def home(request):
 def wip(request):
     return render(request, 'WIP_page.html')
 
-def document_upload_old(request):
-    if request.method == 'POST':
-        form = DocumentForm(request.POST, request.FILES)
-        if form.is_valid():
-            # Get the selected document type
-            document_type = form.cleaned_data['document_type']
-            file = request.FILES['file']
-
-            # Process the file using your pipeline
-            pipeline = DocumentProcessPipeline()
-            pipeline.document_pipeline(file, document_type)  # Adjust as needed
-
-            return render(request, 'upload_success.html')
-    else:
-        form = DocumentForm()
-    return render(request, 'upload.html', {'form': form})
 
 def document_upload(request):
+    # Using pickle as a temporary solution to cache the project and tag options
+    cache = pickle.load(open('/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/tags_and_projects_cache/tags_and_projects_cache.pkl', 'rb'))
+    project_options = cache['project_options']
+    tag_options = cache['tag_options']
     if request.method == 'POST':
-        print(request.POST)
-        #form = DocumentForm(request.POST, request.FILES)
-        #if form.is_valid():
-            # Get the selected document type
-        #document_type = form.cleaned_data['document_type']
-        #document_tags = form.cleaned_data['document_tags']
+        #print(request.POST)
+        # Get the selected document data
         document_type = request.POST.get('document_type')
-        document_tags = request.POST.getlist('document_tags')
         file = request.FILES['file']
         author = request.POST.get('author',None) if request.POST.get('author') != '' else None
         title = request.POST.get('title',None) if request.POST.get('title') != '' else None
         subject = request.POST.get('subject',None) if request.POST.get('subject') != '' else None
         date = request.POST.get('date',None) if request.POST.get('date') != '' else None
         keywords = request.POST.get('Keywords',None) if request.POST.get('Keywords') != '' else None
+        projects = json.loads(request.POST.get('projects',None)) if request.POST.get('proje cts') != '' else None
+        document_tags = json.loads(request.POST.get('tags',None)) if request.POST.get('tags') != '' else None
+        # Convert the JSON data to a list of values
+        if projects:
+            projects = [v['value'] for v in projects]
+        if document_tags:
+            document_tags = [v['value'] for v in document_tags]
         metadata = {'Author':author,'Title':title,'Subject':subject,'Date':date,'Keywords':keywords}
         # Process the file using document process pipeline
         pipeline = DocumentProcessPipeline()
-        document_id = pipeline.document_pipeline(file, document_type,metadata = metadata,tags = document_tags)  # Adjust as needed
+        document_id = pipeline.document_pipeline(file, document_type,metadata = metadata,tags = document_tags,projects = projects)
+        if projects:
+            project_options_set = set(project_options)
+            project_options_set.update(projects)
+        else:
+            project_options_set = project_options
+        if document_tags:
+            tag_options_set = set(tag_options)
+            tag_options_set.update(document_tags)
+        else:
+            tag_options_set = tag_options
+        cache['project_options'] = list(project_options_set)
+        cache['tag_options'] = list(tag_options_set)
+        pickle.dump(cache, open('/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/tags_and_projects_cache/tags_and_projects_cache.pkl', 'wb'))   
         # Return a JSON response instead of rendering a page
         return JsonResponse({'status': 'success', 'message': 'File uploaded successfully'}) 
-        #else:
-            # Return an error message if form is not valid
-            #return JsonResponse({'status': 'error', 'message': 'Invalid form submission'}, status=400)
-
     else:
         form = DocumentForm()
-        return render(request, 'document_upload.html', {'form': form})
+        return render(request, 'document_upload.html', {'form': form,'project_options': project_options,'tag_options': tag_options})
 
 from django.http import JsonResponse
 
@@ -141,7 +140,9 @@ def list_pdf_files(request):
 
 
 def search_documents(request):
-    tag_form = DocumentForm()
+    cache = pickle.load(open('/root/gpt_projects/ABoringKnowledgeManagementSystem/WebApp/WebUI/static/tags_and_projects_cache/tags_and_projects_cache.pkl', 'rb'))
+    project_options = cache['project_options']
+    tag_options = cache['tag_options']
     if request.method == 'POST':
         print('Performing search...')
         # Extract data from the POST request
@@ -156,19 +157,24 @@ def search_documents(request):
         semantic_search = True if request.POST.get('semanticSearch')=='true' else False
         exact_match = True if request.POST.get('exactMatch') == 'true' else False
         keywords = request.POST.get('Keywords',None) if request.POST.get('Keywords') != '' else None
-        document_tags = request.POST.getlist('document_tags') # TODO Modify the search engine to support tags
+        document_tags = request.POST.get('tags',None) if request.POST.get('tags') != '' else None
+        projects = request.POST.get('projects',None) if request.POST.get('projects') != '' else None
+        if document_tags:
+            document_tags = [v['value'] for v in json.loads(document_tags)]
+        if projects:
+            projects = [v['value'] for v in json.loads(projects)]
         additional_query = {key: value for key, value in zip(['Author', 'Title', 'Subject', 'Keyword'], [author, title, subject, keywords]) if value is not None}
         if search_query != None: 
-            print('Search query:', search_query, 'Document type:', document_type, 'Language:', language, 'Author:', author, 'Title:', title, 'Subject:', subject, 'Date:', date, 'keywords', keywords ,'Semantic search:', semantic_search, 'Exact match:', exact_match)
+            #print('Search query:', search_query, 'Document type:', document_type, 'Language:', 'Tags:',document_tags,"projects:",projects,language, 'Author:', author, 'Title:', title, 'Subject:', subject, 'Date:', date, 'keywords', keywords ,'Semantic search:', semantic_search, 'Exact match:', exact_match)
             # Search the index
             search_engine = SearchEngine()
             if semantic_search:
                 print('Performing semantic search...')
                 vect =  embedder.embedding_listoftext([search_query],'local')[0]
-                search_results = search_engine.vector_search(index_name= document_type,query_vector=vect, language = language, additional_metadata=additional_query)
+                search_results = search_engine.vector_search(index_name= document_type,query_vector=vect, language = language, tags = document_tags , projects= projects ,additional_metadata=additional_query)
             else:
                 print('Performing term search...')
-                search_results = search_engine.search_for_terms(index_name= document_type,word=search_query,exact_match =exact_match , language = language, additional_metadata=additional_query)
+                search_results = search_engine.search_for_terms(index_name= document_type,word=search_query,exact_match =exact_match , language = language, tags = document_tags , projects= projects ,additional_metadata=additional_query)
             if search_results['hits']['hits']:
                 grouped_results = {}
                 for hit in search_results['hits']['hits']:
@@ -197,7 +203,7 @@ def search_documents(request):
             pickle.dump(search_results, open(CROSS_DOCUMENT_SEARCH_CACHE_PATH, 'wb'))
             return JsonResponse([])
     else:
-        return render(request, 'document_search.html',{'form': tag_form})
+        return render(request, 'document_search.html',{'tag_options': tag_options,'project_options': project_options})
 
 import base64  
 def byte_pdfview(request):

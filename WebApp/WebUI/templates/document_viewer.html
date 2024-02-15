@@ -106,7 +106,7 @@
             <!-- Embedded PDF.js viewer goes here -->
             <iframe
             id = "documentIframe"
-            src="{% static 'pdfjs/web/viewer.html' %}?file={% static 'd42a0cd9-fdfd-4639-a38c-a85b08cd37a7.pdf' %}&page=2"
+            src="{% static 'pdfjs/web/viewer.html' %}?file={% static 'example_pdf.pdf' %}"
             frameborder="0"
             style="border: none; width: 100%; height: 100%;">
             </iframe>
@@ -154,8 +154,7 @@
         .catch(error => console.error('Error:', error));
     }
     </script>
-    
-    
+
 
 </body>
 </html>

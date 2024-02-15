@@ -1,12 +1,10 @@
-from config import ES_HOST, MONGODB_HOST, MONGODB_DB, DOCUMENTBANK_ROOT,SUPPORTED_FILE_TYPE, DOCUMENT_TYPE
+from config import DOCUMENTBANK_ROOT,SUPPORTED_FILE_TYPE, DOCUMENT_TYPE
 #from DocumentIndexing.MongoDB.documentstore import uploadDocument,delete_document,update_document
 #from file_monitor import FileMonitor
-import inspect
 import DocumentManagement.documents as documents
 #from watchdog.observers import Observer
 from django.core.files.storage import FileSystemStorage 
 from Utils.common_utils import get_document_classes
-import time
 import os
 
 
@@ -18,9 +16,9 @@ class File_Manager:
         self.supported_file_types = SUPPORTED_FILE_TYPE
         self.document_types = DOCUMENT_TYPE
         self.file_type_mapping  = get_document_classes(documents)
-        print(self.file_type_mapping)
+        #print(self.file_type_mapping)
 
-    def upload_file(self, file, document_type, document_id):
+    def upload_file(self, file, document_type,  document_id):
         if document_type not in self.document_types:
             raise ValueError(f"Invalid document type. Allowed types: {self.document_types}")
 

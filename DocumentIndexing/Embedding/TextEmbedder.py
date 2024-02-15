@@ -29,13 +29,13 @@ class TextEmbedder:
         response = openai.Embedding.create(input=text_list, engine="text-similarity-babbage-001")
         return [embedding['embedding'] for embedding in response['data']]
 
-    def embeddings_multilingual(self, sentences):
+    def embeddings_multilingual(self, sentences,max_length = TEXT_SPLIT_SIZE):
         if self.local_model_name == 'sentence-transformers/distiluse-base-multilingual-cased-v2':
             return self.local_model.encode(sentences)
         elif self.local_model_name == 'BAAI/bge-m3':
-            return self.local_model.encode(sentences, return_dense=True, return_sparse=False, return_colbert_vecs=False,max_length = TEXT_SPLIT_SIZE )['dense_vecs']
+            return self.local_model.encode(sentences, return_dense=True, return_sparse=False, return_colbert_vecs=False)['dense_vecs']
 
-    def embedding_listoftext(self, text_list, embedding_type='local'):
+    def embedding_listoftext(self, text_list, embedding_type='local',max_length = TEXT_SPLIT_SIZE):
         if embedding_type == 'local':
             return self.embeddings_multilingual(text_list)
         elif embedding_type == 'oai':

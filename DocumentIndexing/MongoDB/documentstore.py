@@ -1,9 +1,9 @@
 from pymongo import MongoClient
 from config import MONGODB_HOST, MONGODB_DB
 from datetime import datetime
-from Utils.common_utils import detect_language,convert_keys_to_string
+from Utils.common_utils import convert_keys_to_string
 
-def upload_document_to_mongodb(document):
+def upload_document_to_mongodb(document,client = None,db_name = None,collection_name = None):
     """
     Uploads a document's text and metadata to the MongoDB database 'ABKMS'.
 
@@ -14,34 +14,53 @@ def upload_document_to_mongodb(document):
     Returns:
     ObjectId: The unique ID of the inserted document.
     """
+    if client is None:
     # Connect to MongoDB (modify the connection string as per your MongoDB setup)
-    client = MongoClient(MONGODB_HOST)
-
+        client = MongoClient(MONGODB_HOST)
     # Access the database and collection
-    db = client[MONGODB_DB]
-    collection = db[document.document_type]
+        db = client[MONGODB_DB]
+        collection = db[document.document_type]
+    else:
+        client = client
+        db = client[db_name]
+        collection = db[collection_name]
 
     # Combine page data and metadata into one document
     mongodocument = {
         '_id': document.document_id,
         'file_type': document.file_type,
-        'file_path': document.file_path,
         'upload_date': datetime.now(),
-        'document_page_count': document.total_page_number,
-        'document_tags': document.tags,
-        'document_title': document.document_title,
-        'document_summary': document.document_summary,
+        'document_project': document.project, #list of project ids
+        'related_documents': document.related_documents, #dict of related documents ids,the key is the relation type
+        'document_tags': document.tags, #list of tags,currently the tag options are stored in the local cahce file
         'acheived': False,
     }
+    #TODO: add language detection for note
     if hasattr(document, 'text'):
         mongodocument['text'] = document.text
-        mongodocument['language'] = document.language
+        #Temporary disable and move to pdf document since the note document need something to detect language
+        #mongodocument['language'] = document.language 
 
     if document.file_type == 'pdf':
+        mongodocument['file_path'] = document.file_path
+        mongodocument['document_page_count'] = document.total_page_number
+        mongodocument['document_title'] = document.document_title
+        mongodocument['document_summary'] = document.document_summary
+        mongodocument['generated_summary'] = document.generated_summary
         mongodocument['metadata'] = document.metadata
+        mongodocument['annotation '] = document.annotation
         mongodocument['notes'] = document.notes
+        # Move to here to detect language,a temporary fix for note dose not have language detection yet
+        mongodocument['language'] = document.language
     elif document.file_type == 'docx':
         mongodocument['metadata'] = document.metadata
+
+    elif document.file_type == 'note':
+        mongodocument['note_title'] = document.note_title
+        mongodocument['text'] = document.text
+        mongodocument['attached_documents'] = document.attached_documents_ids  #list/string(if note_type is pdf_note) of documents ids the note is attached to 
+        mongodocument['note_type'] = document.note_type #type of the note,now only has "pdf note" type
+        
     
     #convert_keys_to_string(mongodocument)
     mongodocument = convert_keys_to_string(mongodocument)
@@ -54,7 +73,7 @@ def upload_document_to_mongodb(document):
 
 
 
-def delete_document_from_mongodb(db_name,collection_name,document_id):
+def delete_document_from_mongodb(db_name,collection_name,document_id,client = None):
     """
     Deletes a document from the MongoDB database 'ABKMS'.
 
@@ -65,7 +84,8 @@ def delete_document_from_mongodb(db_name,collection_name,document_id):
     ObjectId: The unique ID of the deleted document.
     """
     # Connect to MongoDB (modify the connection string as per your MongoDB setup)
-    client = MongoClient(MONGODB_HOST)
+    if client is None:
+        client = MongoClient(MONGODB_HOST)
 
     # Access the database and collection
     db = client[db_name]
@@ -75,42 +95,31 @@ def delete_document_from_mongodb(db_name,collection_name,document_id):
     result = collection.delete_one({'_id': document_id})
 
     # Return the unique ID of the deleted document
-    return result.deletedocument_id
+    return result
 
-def update_document_in_mongodb(page_data, metadata,db_name,collection_name,document_id):
+def update_document_in_mongodb(update_data,db_name,collection_name,document_id,client = None):
     """
     Updates a document in the MongoDB database 'ABKMS'.
 
-    Args:
-    page_data (dict): A dictionary where the key is the page number and the value is the text on that page.
-    metadata (dict): A dictionary containing the metadata of the document.
-    document_id (ObjectId): The unique ID of the document to be updated.
-
-    Returns:
-    ObjectId: The unique ID of the updated document.
     """
+    if client is None:
+        client = MongoClient(MONGODB_HOST)
     # Connect to MongoDB (modify the connection string as per your MongoDB setup)
-    client = MongoClient(MONGODB_HOST)
 
     # Access the database and collection
     db = client[db_name]
     collection = db[collection_name]
 
     # Combine page data and metadata into one document
-    document = {
-        '_id': document_id,
-        'metadata': metadata,
-        'page_data': page_data,
-        
-    }
+    document = update_data
 
     # Update the document in the collection
     result = collection.update_one({'_id': document_id}, {'$set': document})
 
     # Return the unique ID of the updated document
-    return result.upsertedocument_id
+    return result
 
-def get_document_from_mongodb_id(collection_name,document_id):
+def get_document_from_mongodb_id(collection_name,document_id,client = None):
     """
     Gets a document from the MongoDB database 'ABKMS'.
 
@@ -121,17 +130,81 @@ def get_document_from_mongodb_id(collection_name,document_id):
     dict: A dictionary containing the document's metadata and page data.
     """
     # Connect to MongoDB (modify the connection string as per your MongoDB setup)
-    client = MongoClient(MONGODB_HOST)
+    if client is None:
+        client = MongoClient(MONGODB_HOST)
+    else:
+        client = client
 
     # Access the database and collection
     db = client[MONGODB_DB]
     collection = db[collection_name]
 
     # Get the document from the collection
-    document = collection.find_one({'_id': document_id})
+    document = collection.find({'_id': document_id})
 
     # Return the document
     return document
+
+def get_document_from_mongodb(collection_name,db_name,query_field,query_terms,client = None):
+    """
+    Gets a document from the MongoDB database 'ABKMS'.
+
+    Args:
+    document_id (ObjectId): The unique ID of the document to be retrieved.
+
+    Returns:
+    dict: A dictionary containing the document's metadata and page data.
+    """
+    # Connect to MongoDB (modify the connection string as per your MongoDB setup)
+    if client is None:
+        client = MongoClient(MONGODB_HOST)
+        db = client[MONGODB_DB]
+    else:
+        client = client
+        db = client[db_name]
+
+    # Access the database and collection
+    db = client[MONGODB_DB]
+    collection = db[collection_name]
+
+    # Get the document from the collection
+    document = collection.find({query_field: query_terms})
+
+    # Return the document
+    return document
+
+from pymongo import MongoClient
+
+def get_document_field_from_mongodb(collection_name, db_name, query_field, query_terms, return_field, client=None):
+    """
+    Gets a specific field's value from a document in the MongoDB database.
+
+    Args:
+    collection_name (str): The name of the collection.
+    db_name (str): The name of the database.
+    query_field (str): The field name to query.
+    query_terms: The value of the query field to match.
+    return_field (str): The name of the field whose value is to be returned.
+    client (MongoClient, optional): An instance of MongoClient.
+
+    Returns:
+    The value of the specified field in the document, or None if the document or field does not exist.
+    """
+    if client is None:
+        client = MongoClient("mongodb_host")  # Replace "mongodb_host" with your MongoDB host
+        db = client[db_name]
+    else:
+        db = client[db_name]
+
+    # Access the collection
+    collection = db[collection_name]
+
+    # Get the document from the collection
+    document = collection.find_one({query_field: query_terms})
+
+    # Return the value of the specified field
+    return document.get(return_field) if document else None
+
 
 import json
 def get_document_from_collection(collection_name,output_to_file = False):
@@ -158,6 +231,7 @@ def get_document_from_collection(collection_name,output_to_file = False):
             json.dump(documents,f,default=str,indent=4,ensure_ascii=False)
 
     # Return the document
+    client.close()
     return documents
 
 
