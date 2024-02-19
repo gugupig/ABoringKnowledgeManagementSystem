@@ -481,44 +481,62 @@
             makeDraggable(document.querySelector('#chatbotWindow'));
 
             function isTouchDevice() {
-              return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
-  }
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+}
 
-            document.addEventListener(isTouchDevice() ? 'touchend' : 'click', e => {
-                // Since touchend events don't have a closest method, we need to manually check if the target or any of its parents have the class
-                let target = e.target;
-                while (target != null) {
-                    if (target.classList && target.classList.contains('round')) {
-                        // Found a target with the 'round' class, check for specific buttons
-                        if (target.classList.contains('red')) {
-                            $('#chatbotWindow').toggle();
-                        } else if (target.classList.contains('yellow')) {
-                            const chatWindow = document.getElementById('chatbotWindow');
-                            chatWindow.style.width = '90vw';
-                            chatWindow.style.height = '90vh';
-                            chatWindow.style.display = 'block';
-                        } else if (target.classList.contains('green')) {
-                            const chatWindow = document.getElementById('chatbotWindow');
-                            chatWindow.style.width = '50vw';
-                            chatWindow.style.height = '50vh';
-                            chatWindow.style.display = 'block';
-                        } else if (target.classList.contains('blue')) {
-                            const chatWindow = document.getElementById('chatbotWindow');
-                            if (!isTranslucent) {
-                                chatWindow.style.opacity = '0.6';
-                                isTranslucent = true;
-                            } else {
-                                chatWindow.style.opacity = '1';
-                                isTranslucent = false;
-                            }
-                        }
-                        // Prevent handling the same touch as a drag
-                        e.preventDefault();
-                        break;
-                    }
-                    target = target.parentNode;
+let isTranslucent = false;
+
+// Function to handle interaction
+function handleInteraction(event) {
+    let target = event.target;
+    while (target != null) {
+        if (target.classList && target.classList.contains('round')) {
+            // Found a target with the 'round' class, check for specific buttons
+            if (target.classList.contains('red')) {
+                $('#chatbotWindow').toggle();
+            } else if (target.classList.contains('yellow')) {
+                const chatWindow = document.getElementById('chatbotWindow');
+                chatWindow.style.width = '90vw';
+                chatWindow.style.height = '90vh';
+                chatWindow.style.display = 'block';
+            } else if (target.classList.contains('green')) {
+                const chatWindow = document.getElementById('chatbotWindow');
+                chatWindow.style.width = '50vw';
+                chatWindow.style.height = '50vh';
+                chatWindow.style.display = 'block';
+            } else if (target.classList.contains('blue')) {
+                const chatWindow = document.getElementById('chatbotWindow');
+                if (!isTranslucent) {
+                    chatWindow.style.opacity = '0.6';
+                    isTranslucent = true;
+                } else {
+                    chatWindow.style.opacity = '1';
+                    isTranslucent = false;
                 }
-            }, {passive: false}); 
+            }
+            // Prevent handling the same touch as a drag
+            event.preventDefault();
+            break;
+        }
+        target = target.parentNode;
+    }
+}
+
+// Attach event listeners for both touch and mouse interactions
+if (isTouchDevice()) {
+    document.addEventListener('touchend', handleInteraction, {passive: false});
+} else {
+    // Mouse events
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('mousedown', handleInteraction);
+    document.addEventListener('mouseup', handleInteraction); 吗，吧
+    // Optional: Consider adding 'mousedown' or 'mouseup' if 'click' isn't sufficient
+}
+
+// Note: Adding 'pointerdown' and 'pointerup' could further enhance compatibility with devices that use pointer events
+document.addEventListener('pointerdown', handleInteraction, {passive: false});
+document.addEventListener('pointerup', handleInteraction, {passive: false});
+
 </script>
 
   <!-- Chatbot window toggle -->

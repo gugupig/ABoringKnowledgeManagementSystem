@@ -30,16 +30,33 @@ else:
     pdf_file_text = ''
 corss_document_search_results = pickle.load(open(CROSS_DOCUMENT_SEARCH_CACHE_PATH, 'rb'))
 
+
+def ask_gpt4(question, client):
+    response = client.chat.completions.create(
+        model=st.session_state["openai_model"],
+        messages=question,
+    )
+    
+    return response.choices[0].message.content
 st.set_page_config(page_title='Chatbot-widget', page_icon=':star', layout='wide')
 
 def reset_all():
-    st.session_state.messages = []
+    chat_history = get_document_field_from_mongodb(client = mongo_client,db_name='ABKMS',collection_name='research_paper',query_field='_id',query_terms=pdf_file_id,return_field='chat_history')
+    if chat_history:
+        st.session_state.messages = chat_history
+    else:
+        st.session_state.messages = []
     st.session_state.user_input = ''
     st.session_state.assistant_response = ''
     st.session_state.context = ''
     st.session_state.retrieved_page_nb = ''
     st.session_state.last_user_input = ''
     st.session_state.last_assistant_response = ''
+    generated_text = get_document_field_from_mongodb(client = mongo_client,db_name='ABKMS',collection_name='research_paper',query_field='_id',query_terms=pdf_file_id,return_field='generated_text')
+    if generated_text:
+        st.session_state.generated_text = generated_text
+    else:
+        st.session_state.generated_text = {'summary': ''}
     pulled_notes = get_document_from_mongodb(client=mongo_client,db_name='ABKMS',collection_name='notes',query_field='attached_documents',query_terms=pdf_file_id)
     st.session_state.notes = {
         note['_id']:{'Title': note['note_title'],'Content':note['text'],'Date':note['upload_date'].strftime("%d/%m/%Y")} for note in pulled_notes
@@ -87,18 +104,14 @@ with st.sidebar:
                 """,
                 unsafe_allow_html=True)
 
-    if st.button('Reset Session'):
+    if st.button('Reset Session to the current document'):
         reset_all()
-    if st.button('Clear Chat History'):
-        st.markdown("""
-                    <span style="color: red; font-weight: bold;">THIS WILL CLEAR ALL CHAT HISTORY RELATED TO THIS DOCUMENT IN THE DATABASE !!!<br>
-                    ARE YOU SURE ?</span>
-                    """,unsafe_allow_html=True)
-        if st.button('YES',key = 'yes'):
+    if st.button('Clear Chat History',key = 'clear_chat_history'):
             st.session_state.messages = []
+            print(st.session_state.messages)
             update_document_in_mongodb(client = mongo_client,db_name='ABKMS',document_id=pdf_file_id,collection_name='research_paper',update_data={'chat_history':st.session_state.messages})
-        elif st.button('NO',key = 'no'):
-            pass
+            clear_to_current_document = False
+            st.rerun()
     model = st.selectbox(
         'Model',
         ['gpt-3.5-turbo-0125', 'gpt-4-turbo-preview'])
@@ -200,9 +213,10 @@ with tab1:
                     st.session_state.retrieved_page_nb = retrieved_page_nb
                 if rag_number!=0 and chat_bot_statut == 'Cross Document Search':
                     pass
-                if rag_number == 0 :
+                elif rag_number == 0 :
                     st.session_state.context = None
                     st.session_state.retrieved_page_nb = None
+
                 st.session_state.messages.append({"role": "user", "content": original_prompt})
 
                 full_response = ""
@@ -214,13 +228,7 @@ with tab1:
 
                     # API request to OpenAI
                 
-                full_response = ""
-                for response in client.chat.completions.create(
-                    model=st.session_state["openai_model"],
-                    messages=messages_to_send,
-                    stream=True,
-                ):
-                    full_response += (response.choices[0].delta.content or "")
+                full_response = ask_gpt4(messages_to_send, client)
                 if retrieved_page_nb:
                     full_response += f"\n\nRetrieved pages: {', '.join(map(str, retrieved_page_nb)) if retrieved_page_nb else 'No result found.'}"
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
@@ -235,9 +243,9 @@ with tab1:
             top: 150px;
             z-index: 1;
             overflow-y: auto;
-            height: 70vh;
+            height: 65vh;
             max-width: 100vw;
-            padding: 20px;
+            padding: 30px;
             
         }
         """,
@@ -249,7 +257,7 @@ with tab1:
             elif message["role"] == "assistant":
                 with st.chat_message('assistant'):
                     st.markdown(message["content"])
-                    if st.session_state.context !=None and i == len(st.session_state.messages)-1:
+                    if st.session_state.context !=None and i == len(st.session_state.messages)-1 and st.session_state.retrieved_page_nb:
                         expander = st.expander(f"Retrieved Context at page {st.session_state.retrieved_page_nb}")
                         for text in st.session_state.context.split('\n'):
                             expander.write(text)
@@ -328,7 +336,7 @@ with tab2:
         {
             position: fixed;
             bottom: 30px;
-            z-index: 1;
+            z-index: 999;
             max-width: 100vw;
         }
         """,
@@ -353,13 +361,7 @@ with tab2:
                 st.rerun()
                 
 
-def ask_gpt4(question, client):
-    response = client.chat.completions.create(
-        model=st.session_state["openai_model"],
-        messages=question,
-    )
-    
-    return response.choices[0].message.content
+
 
 from Chat import pre_build_tools
 with tab4:
@@ -368,7 +370,6 @@ with tab4:
     summarize_prompt = """Write a concise summary of the following:
                         "{text}"            
                         """
-    
     if 'document_text' not in st.session_state:
         document_text = get_document_field_from_mongodb(client = mongo_client,db_name='ABKMS',collection_name='research_paper',query_field='_id',query_terms=pdf_file_id,return_field='text')
         if document_text:
@@ -387,6 +388,9 @@ with tab4:
     with col1:
         summarize = st.button('Summarize Document') 
         sum_stradegy = st.selectbox('Summarize Stradegy',['Brute Force (EXPANSIVE!!!)','KNN Summarizer (WIP)'])
+        if sum_stradegy == 'KNN Summarizer (WIP)':
+            k_nb = st.slider('Number of Cluster',min_value=10,max_value=40,value=10,key='k_nb')
+            nb_per_cluster = st.slider('Number of passages per Cluster',min_value=1,max_value=5,value=1,key='nb_per_cluster')
         with st.spinner('Working...'):
             if summarize:
                 if sum_stradegy == 'Brute Force (EXPANSIVE!!!)':
@@ -395,7 +399,12 @@ with tab4:
                             for page in st.session_state.document_text.values():
                                 context_text += page
                 elif sum_stradegy == 'KNN Summarizer (WIP)':
-                    context_text =  '\n'.join(pre_build_tools.cluster_search_engine(document_id=pdf_file_id))
+                    summarize_prompt = """
+                        You will be given some passages of a document. This passage will be enclosed in triple backticks (```)
+                        Your goal is to give a concise summary of these passages so that a reader will have a full understanding of what happened in the document.
+                        ```{text}```
+                                """
+                    context_text =  '\n'.join(pre_build_tools.cluster_search_engine(document_id=pdf_file_id,cluster_number = k_nb,nb_return_per_cluster = nb_per_cluster))
                 summarize_prompt = summarize_prompt.format(text=context_text)
                 messages = [
                     {'role': "system", "content": """
@@ -426,7 +435,7 @@ with tab5:
     col3, col4 = st.columns([1,1])
     with col3:
         summarize_1 = st.button('Summarize Document',key='summarize_1') 
-        k_nb = st.slider('Number of Cluster',min_value=10,max_value=30,value=10)
+        k_nb = st.slider('Number of Cluster',min_value=10,max_value=40,value=10)
         nb_per_cluster = st.slider('Number of passages per Cluster',min_value=1,max_value=5,value=1)
         with st.spinner('Working...'):
             if summarize_1:

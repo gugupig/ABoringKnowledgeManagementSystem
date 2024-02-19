@@ -1,4 +1,6 @@
 #!/bin/bash
+echo "Starting virtual environment..."
+source /root/codebox39/bin/activate
 
 # Start Django
 echo "Starting Django..."
@@ -16,7 +18,7 @@ cd ~/gpt_projects/ABoringKnowledgeManagementSystem/DocumentIndexing/Embedding
 python embedding_service.py &
 
 # Wait for any process to exit
-waitp
+wait
 
 # Kill all background processes on exit
 trap "exit" INT TERM ERR

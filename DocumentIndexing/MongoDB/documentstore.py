@@ -115,7 +115,6 @@ def update_document_in_mongodb(update_data,db_name,collection_name,document_id,c
 
     # Update the document in the collection
     result = collection.update_one({'_id': document_id}, {'$set': document})
-
     # Return the unique ID of the updated document
     return result
 

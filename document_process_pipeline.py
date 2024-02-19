@@ -9,7 +9,7 @@ from DocumentManagement.documents import Document
 from DocumentManagement.file_manager import File_Manager     
 from pymongo.errors import DuplicateKeyError   
 from config import ES_HOST, MONGODB_HOST, MONGODB_DB, DOCUMENTBANK_ROOT,EMBEDDING_DINENSION
-from Utils.common_utils import save_research_papers_to_json
+from Utils import common_utils
 from datetime import datetime
 import time
 
@@ -161,7 +161,7 @@ class DocumentProcessPipeline:
 
     def document_pipeline(self, file, document_type,metadata = None,tags = None,projects = None):
         # Generate unique document ID at the beginning
-        document_id = self.common_utils.generate_document_id()
+        document_id = common_utils.generate_document_id()
 
 
         # Step 1: Upload document to DocumentBank
@@ -200,7 +200,7 @@ class DocumentProcessPipeline:
             # No rollback needed here as it's the first database operation
             return False
         # Step 3.5: Save research papers to json list cache
-        save_research_papers_to_json()
+        common_utils.save_research_papers_to_json()
         # Step 4: sub_pipeline depending on document size
         #if new_document.total_page_number > 100:
             #sub_pipeline_status = self.sub_pipeline_bulk(new_document)

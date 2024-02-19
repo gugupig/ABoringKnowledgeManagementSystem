@@ -155,7 +155,7 @@ class PDFProcessor:
 class SpacyPdfProcessor(PDFProcessor):
     def __init__(self, file_path):
         super().__init__(file_path)
-        self.nlp = spacy.load(f'{self.language}_core_web_sm')
+        self.nlp = spacy.load(f'{self.language}_core_web_sm') if self.language != 'fr' else spacy.load('fr_core_news_sm')
         self.doc = pdf_reader(self.file_path,self.nlp)
         self.first,self.last = self.doc._.page_range
 
